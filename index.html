@@ -506,65 +506,135 @@ function updateStats(){
 async function loadMatches(){
   const c=document.getElementById('matches-container');
   c.innerHTML='<div class="loading"><span class="spin"></span>正在抓取实时数据...</div>';
-  try{
-    const res=await fetch('https://worldcup26.ir/get/games');
-    if(!res.ok)throw new Error('API错误');
-    const data=await res.json();
-    const games=data.games||data||[];
-    if(!games.length){c.innerHTML='<div class="loading">暂无赛事数据</div>';return;}
 
-    // Group by status
-    const live=games.filter(g=>g.status==='in_progress'||g.status==='live');
-    const today=games.filter(g=>{
-      const d=new Date(g.utc_date||g.date||g.match_date);
-      const now=new Date();
-      return d.toDateString()===now.toDateString()&&g.status!=='finished'&&g.status!=='completed';
+  // Try multiple APIs
+  const apis=[
+    {url:'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026--usa/cup.json',parser:parseOpenFootball},
+    {url:'https://worldcup-2026.onrender.com/matches',parser:parseGeneric},
+  ];
+
+  for(const api of apis){
+    try{
+      const res=await fetch(api.url);
+      if(!res.ok)continue;
+      const data=await res.json();
+      const html=api.parser(data);
+      if(html){
+        c.innerHTML=html;
+        document.getElementById('last-update').textContent='更新：'+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+        return;
+      }
+    }catch(e){continue;}
+  }
+
+  // Fallback: show static data
+  c.innerHTML=staticMatches();
+  document.getElementById('last-update').textContent='静态数据';
+}
+
+function parseOpenFootball(data){
+  try{
+    const rounds=data.rounds||[];
+    let matches=[];
+    rounds.forEach(r=>{
+      (r.matches||[]).forEach(m=>{
+        matches.push({
+          home:m.team1?.name||m.team1||'',
+          away:m.team2?.name||m.team2||'',
+          date:m.date,
+          time:m.time,
+          score1:m.score1,
+          score2:m.score2,
+          round:r.name
+        });
+      });
     });
-    const finished=games.filter(g=>g.status==='finished'||g.status==='completed').slice(-8);
+
+    const now=new Date();
+    const todayStr=now.toISOString().split('T')[0];
+
+    const finished=matches.filter(m=>m.score1!==null&&m.score1!==undefined).slice(-6);
+    const upcoming=matches.filter(m=>(m.score1===null||m.score1===undefined)&&m.date>=todayStr).slice(0,8);
 
     let html='';
 
-    if(live.length){
-      html+=`<div class="section-head">🔴 进行中</div>`;
-      live.forEach(g=>html+=matchCard(g,'live'));
-    }
-    if(today.length){
-      html+=`<div class="section-head">⏰ 今日赛事</div>`;
-      today.forEach(g=>html+=matchCard(g,'upcoming'));
-    }
-    if(finished.length){
-      html+=`<div class="section-head">✅ 最近完赛</div>`;
-      finished.reverse().forEach(g=>html+=matchCard(g,'finished'));
+    if(upcoming.length){
+      html+='<div class="section-head">⏰ 即将开赛</div>';
+      upcoming.forEach(m=>{
+        const myt=m.time?m.time+' (UTC → +8hr MYT)':'—';
+        html+=`<div class="match-item">
+          <div class="match-time" style="font-size:10px">${m.date||'—'}</div>
+          <div class="match-teams">
+            <div class="match-name">${m.home} vs ${m.away}</div>
+            <div class="match-score">${m.round||''}</div>
+          </div>
+          <div class="match-badges"><span class="badge b-blue">未开赛</span></div>
+        </div>`;
+      });
     }
 
-    c.innerHTML=html||'<div class="loading">暂无数据</div>';
-    document.getElementById('last-update').textContent='更新：'+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-  }catch(e){
-    c.innerHTML=`<div class="alert alert-red">⚠️ 抓取失败：${e.message}<br><span style="font-size:11px">免费API可能暂时不可用，请刷新重试</span></div>`;
-  }
+    if(finished.length){
+      html+='<div class="section-head">✅ 最近完赛</div>';
+      finished.reverse().forEach(m=>{
+        html+=`<div class="match-item">
+          <div class="match-time" style="font-size:10px">${m.date||'—'}</div>
+          <div class="match-teams">
+            <div class="match-name">${m.home} vs ${m.away}</div>
+            <div class="match-score">${m.round||''}</div>
+          </div>
+          <div class="match-badges">
+            <span class="badge b-gold" style="background:rgba(241,196,15,.1);color:var(--gold);border:1px solid rgba(241,196,15,.3)">${m.score1} - ${m.score2}</span>
+            <span class="badge b-gray">完赛</span>
+          </div>
+        </div>`;
+      });
+    }
+
+    return html||null;
+  }catch(e){return null;}
 }
 
-function matchCard(g,type){
-  const home=g.home_team?.name||g.home||'主队';
-  const away=g.away_team?.name||g.away||'客队';
-  const hScore=g.score?.home??g.home_score??'';
-  const aScore=g.score?.away??g.away_score??'';
-  const score=hScore!==''?`${hScore} - ${aScore}`:'未开赛';
-  const timeStr=g.utc_date||g.date?new Date(g.utc_date||g.date).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kuala_Lumpur'}):'—';
+function parseGeneric(data){
+  try{
+    const matches=Array.isArray(data)?data:data.matches||data.games||[];
+    if(!matches.length)return null;
+    let html='<div class="section-head">🏆 世界杯赛事</div>';
+    matches.slice(0,10).forEach(m=>{
+      const home=m.home_team||m.home||'主队';
+      const away=m.away_team||m.away||'客队';
+      const score=m.home_score!=null?`${m.home_score} - ${m.away_score}`:'未开赛';
+      html+=`<div class="match-item">
+        <div class="match-teams"><div class="match-name">${home} vs ${away}</div></div>
+        <div class="match-badges"><span class="badge b-gold" style="background:rgba(241,196,15,.1);color:var(--gold);border:1px solid rgba(241,196,15,.3)">${score}</span></div>
+      </div>`;
+    });
+    return html;
+  }catch(e){return null;}
+}
 
-  let statusBadge='';
-  if(type==='live')statusBadge='<span class="badge b-red">🔴 直播</span>';
-  else if(type==='finished')statusBadge='<span class="badge b-gray">完赛</span>';
-  else statusBadge=`<span class="badge b-blue">${timeStr} MYT</span>`;
+function staticMatches(){
+  const matches=[
+    {home:'🇫🇷 法国',away:'🇮🇶 伊拉克',time:'05:00',status:'upcoming',verdict:'A层 让球3'},
+    {home:'🇳🇴 挪威',away:'🇸🇳 塞内加尔',time:'08:00',status:'skip',verdict:'C层放弃'},
+    {home:'🇯🇴 约旦',away:'🇩🇿 阿尔及利亚',time:'11:00',status:'upcoming',verdict:'B层 小2/2.5'},
+    {home:'🇦🇷 阿根廷',away:'🇦🇹 奥地利',time:'01:00',status:'skip',verdict:'C层放弃'},
+  ];
 
-  return `<div class="match-item">
-    <div class="match-time">${timeStr}</div>
-    <div class="match-teams">
-      <div class="match-name">${home} vs ${away}</div>
-      <div class="match-score">${score}</div>
-    </div>
-    <div class="match-badges">${statusBadge}</div>
-  </div>`;
+  let html='<div class="section-head">📋 今日赛事 — 系统判定</div>';
+  matches.forEach(m=>{
+    const badge=m.status==='upcoming'
+      ?`<span class="badge b-green">${m.verdict}</span>`
+      :`<span class="badge b-gray">${m.verdict}</span>`;
+    html+=`<div class="match-item">
+      <div class="match-time">${m.time} MYT</div>
+      <div class="match-teams">
+        <div class="match-name">${m.home} vs ${m.away}</div>
+      </div>
+      <div class="match-badges">${badge}</div>
+    </div>`;
+  });
+  html+='<div class="alert alert-amber" style="margin-top:10px">⚠️ 实时API暂时不可用，显示今日静态数据。点刷新重试。</div>';
+  return html;
 }
 
 // ===== FUNNEL =====
