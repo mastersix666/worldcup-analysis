@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>世界杯分析系统 V3.0</title>
+<style>
+:root {
+  --bg:#0a0c0f;--bg2:#111418;--bg3:#181c22;--bg4:#1e2329;
+  --border:#252b34;--border2:#2e3540;
+  --text:#e8eaed;--text2:#9aa0ac;--text3:#5f6672;
+  --green:#00c853;--green-dim:rgba(0,200,83,0.1);--green-border:rgba(0,200,83,0.25);
+  --amber:#ffab00;--amber-dim:rgba(255,171,0,0.1);--amber-border:rgba(255,171,0,0.25);
+  --red:#ff3d3d;--red-dim:rgba(255,61,61,0.1);--red-border:rgba(255,61,61,0.25);
+  --blue:#2979ff;--blue-dim:rgba(41,121,255,0.1);--blue-border:rgba(41,121,255,0.25);
+  --gold:#f1c40f;
+  --font:'SF Pro Display',-apple-system,'PingFang SC',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,12,15,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;height:52px;gap:0}
+.nav-brand{font-size:14px;font-weight:700;color:var(--gold);letter-spacing:.5px;padding-right:20px;border-right:1px solid var(--border);margin-right:4px;white-space:nowrap}
+.nav-tab{padding:0 14px;height:52px;display:flex;align-items:center;font-size:13px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.nav-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* LAYOUT */
+.panel{display:none;padding:20px;max-width:900px;margin:0 auto}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:14px}
+.card-sm{padding:12px 16px}
+.card-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:600px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(2,1fr)}}
+
+/* STAT BOX */
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.stat-val{font-size:24px;font-weight:700;color:var(--text);line-height:1}
+.stat-label{font-size:10px;color:var(--text3);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+
+/* MATCH CARDS */
+.match-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:border-color .2s}
+.match-item:hover{border-color:var(--border2)}
+.match-time{font-size:11px;color:var(--text3);min-width:45px}
+.match-teams{flex:1}
+.match-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px}
+.match-score{font-size:12px;color:var(--text3)}
+.match-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;white-space:nowrap}
+.b-green{background:var(--green-dim);color:var(--green);border:1px solid var(--green-border)}
+.b-amber{background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-border)}
+.b-red{background:var(--red-dim);color:var(--red);border:1px solid var(--red-border)}
+.b-blue{background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-border)}
+.b-gray{background:var(--bg4);color:var(--text3);border:1px solid var(--border)}
+
+/* FUNNEL */
+.layer{border-radius:10px;padding:14px 16px;margin-bottom:8px;border:1px solid var(--border)}
+.layer-a{border-left:3px solid var(--blue)}
+.layer-b{border-left:3px solid var(--amber)}
+.layer-c{border-left:3px solid var(--red)}
+.layer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.layer-title{font-size:13px;font-weight:600;color:var(--text)}
+.check-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px}
+.check-item:last-child{border:none}
+.check-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
+.check-item label{cursor:pointer;color:var(--text);flex:1;font-size:13px;margin:0}
+.auto-tag{font-size:11px;font-weight:600;margin-left:4px}
+
+/* RESULT */
+.result{border-radius:10px;padding:16px;margin-top:12px;text-align:center;border:1px solid}
+.result-title{font-size:18px;font-weight:700;margin-bottom:6px}
+.result-sub{font-size:13px;line-height:1.6}
+
+/* INPUTS */
+input[type=text],input[type=number],select{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:8px 12px;font-size:13px;width:100%;font-family:var(--font);transition:border-color .2s}
+input:focus,select:focus{outline:none;border-color:var(--gold)}
+label.field-label{font-size:11px;color:var(--text3);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:var(--font);transition:all .2s}
+.btn-gold{background:var(--gold);color:#000}
+.btn-gold:hover{opacity:.9}
+.btn-ghost{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--border2)}
+.btn-block{width:100%}
+
+/* BAR */
+.bar-wrap{margin:8px 0}
+.bar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px}
+.bar-track{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font-size:10px;color:var(--text3);font-weight:600;padding:7px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.05em}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border:none}
+tr:hover td{background:var(--bg3)}
+
+/* SECTION */
+.section-head{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin:16px 0 8px}
+.divider{height:1px;background:var(--border);margin:14px 0}
+
+/* ALERT */
+.alert{border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.7;margin-bottom:10px;border:1px solid}
+.alert-green{background:var(--green-dim);color:var(--green);border-color:var(--green-border)}
+.alert-amber{background:var(--amber-dim);color:var(--amber);border-color:var(--amber-border)}
+.alert-red{background:var(--red-dim);color:var(--red);border-color:var(--red-border)}
+.alert-blue{background:var(--blue-dim);color:var(--blue);border-color:var(--blue-border)}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--bg2) 0%,#0d1420 100%);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:18px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 50% 0%,rgba(241,196,15,.05) 0%,transparent 70%)}
+.hero-val{font-size:52px;font-weight:800;color:var(--gold);line-height:1;position:relative}
+.hero-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.hero-sub{font-size:12px;color:var(--text3);margin-top:6px;position:relative}
+
+/* SUB TABS */
+.sub-tabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
+.sub-tab{padding:6px 12px;font-size:12px;border-radius:6px;cursor:pointer;background:var(--bg3);color:var(--text3);border:1px solid var(--border);transition:all .2s}
+.sub-tab.active{background:var(--gold);color:#000;border-color:var(--gold);font-weight:700}
+.sub-panel{display:none}.sub-panel.active{display:block}
+
+/* LOADING */
+.loading{text-align:center;padding:30px;color:var(--text3);font-size:13px}
+.spin{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* RULE ITEM */
+.rule-row{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;align-items:flex-start}
+.rule-row:last-child{border:none}
+.rule-num{font-size:11px;font-weight:700;color:var(--text3);min-width:24px;margin-top:1px}
+.rule-body{flex:1;line-height:1.5}
+.rule-note{font-size:11px;color:var(--green);margin-top:3px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">⚽ WC分析 V3</div>
+  <div class="nav-tab active" onclick="showPanel('live')">实时赛事</div>
+  <div class="nav-tab" onclick="showPanel('funnel')">漏斗判定</div>
+  <div class="nav-tab" onclick="showPanel('records')">复盘记录</div>
+  <div class="nav-tab" onclick="showPanel('rules')">系统规则</div>
+  <div class="nav-tab" onclick="showPanel('stats')">胜率统计</div>
+  <div class="nav-status">
+    <span class="live-dot"></span>
+    <span id="last-update">载入中...</span>
+  </div>
+</nav>
+
+<!-- LIVE PANEL -->
+<div id="panel-live" class="panel active">
+  <div class="card card-sm" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:13px;color:var(--text2)">🌐 自动抓取世界杯实时数据</div>
+      <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="loadMatches()">🔄 刷新</button>
+    </div>
+  </div>
+  <div id="matches-container"><div class="loading"><span class="spin"></span>正在抓取赛事数据...</div></div>
+</div>
+
+<!-- FUNNEL PANEL -->
+<div id="panel-funnel" class="panel">
+  <div class="card">
+    <div class="card-title">📋 赛事信息</div>
+    <div class="g2" style="margin-bottom:10px">
+      <div><label class="field-label">主队</label><input type="text" id="team-home" placeholder="例：法国"></div>
+      <div><label class="field-label">客队</label><input type="text" id="team-away" placeholder="例：伊拉克"></div>
+    </div>
+    <div class="g3" style="margin-bottom:10px">
+      <div><label class="field-label">平赔水位</label><input type="number" id="draw-odds" placeholder="例：9.5" step="0.01" onchange="autoCheck()"></div>
+      <div><label class="field-label">让球线</label>
+        <select id="handicap-line">
+          <option value="">选择</option>
+          <option value="-0.5">-0.5（需≥60%）</option>
+          <option value="-0.75">-0.75（需≥65%）</option>
+          <option value="-1.0">-1.0（需≥70%）</option>
+          <option value="-1.5">-1.5（需≥75%）</option>
+          <option value="-2.0">-2.0（需≥80%）</option>
+          <option value="-3.0">-3.0（需≥85%）</option>
+        </select>
+      </div>
+      <div><label class="field-label">大球水位</label><input type="number" id="over-odds" placeholder="例：1.093" step="0.001" onchange="autoCheck()"></div>
+    </div>
+    <div class="g2">
+      <div><label class="field-label">大小球线</label>
+        <select id="ou-line">
+          <option value="">选择</option>
+          <option value="2/2.5">2/2.5</option>
+          <option value="2.5">2.5</option>
+          <option value="2.5/3">2.5/3</option>
+          <option value="3.0">3.0</option>
+          <option value="3/3.5">3/3.5</option>
+          <option value="3.5">3.5</option>
+          <option value="3.5/4">3.5/4</option>
+        </select>
+      </div>
+      <div><label class="field-label">主队独赢水位</label><input type="number" id="win-odds" placeholder="例：0.437" step="0.001" onchange="autoCheck()"></div>
+    </div>
+  </div>
+
+  <div class="layer layer-a">
+    <div class="layer-head">
+      <div class="layer-title">🔵 A层 — 让球（9项全达标 → 注码5%）</div>
+      <span class="badge b-gray" id="tag-a">待判断</span>
+    </div>
+    <div class="check-item"><input type="checkbox" id="a1" onchange="calc()"><label for="a1">平赔 ≥ 3.5 <span class="auto-tag" id="a1-tag"></span></label></div>
+    <div class="check-item"><input type="checkbox" id="a2" onchange="calc()"><label for="a2">10+1平台盘口统一稳定 ≥ 30分钟</label></div>
+    <div class="check-item"><input type="checkbox" id="a3" onchange="calc()"><label for="a3">让球胜率达标（对应档位门槛）<span class="auto-tag" id="a3-tag"></span></label></div>
+    <div class="check-item"><input type="checkbox" id="a4" onchange="calc()"><label for="a4">进攻 xG ≥ 1.6 且射正 ≥ 4.5（近3场2场达标）</label></div>
+    <div class="check-item"><input type="checkbox" id="a5" onchange="calc()"><label for="a5">防线失 xG ≥ 1.2 且落后失球率 ≥ 40%</label></div>
+    <div class="check-item"><input type="checkbox" id="a6" onchange="calc()"><label for="a6">资金同向：升盘降水，非诱盘信号</label></div>
+    <div class="check-item"><input type="checkbox" id="a7" onchange="calc()"><label for="a7">核心首发出场，无大幅轮换</label></div>
+    <div class="check-item"><input type="checkbox" id="a8" onchange="calc()"><label for="a8">战意确认：有进攻动力，非控分</label></div>
+    <div class="check-item"><input type="checkbox" id="a9" onchange="calc()"><label for="a9">规则12-15无触发（无爆冷高危信号）</label></div>
+  </div>
+
+  <div style="text-align:center;color:var(--text3);font-size:18px;padding:4px 0">↓ 未全达标则降级</div>
+
+  <div class="layer layer-b">
+    <div class="layer-head">
+      <div class="layer-title">🟡 B层 — 大小球（5/6达标 → 注码3%）</div>
+      <span class="badge b-gray" id="tag-b">待判断</span>
+    </div>
+    <div class="check-item"><input type="checkbox" id="b1" onchange="calc()"><label for="b1">大小球盘口方向明确稳定 <span class="auto-tag" id="b1-tag"></span></label></div>
+    <div class="check-item"><input type="checkbox" id="b2" onchange="calc()"><label for="b2">两队进攻xG合计支撑方向（大≥3.0 / 小≤2.0）</label></div>
+    <div class="check-item"><input type="checkbox" id="b3" onchange="calc()"><label for="b3">近5场大/小球方向一致性 ≥ 60%</label></div>
+    <div class="check-item"><input type="checkbox" id="b4" onchange="calc()"><label for="b4">防线数据支撑方向（漏球多→大球）</label></div>
+    <div class="check-item"><input type="checkbox" id="b5" onchange="calc()"><label for="b5">无战意低迷（双队均无死守动机）</label></div>
+    <div class="check-item"><input type="checkbox" id="b6" onchange="calc()"><label for="b6">让球和大小球方向交叉验证一致</label></div>
+  </div>
+
+  <div style="text-align:center;color:var(--text3);font-size:18px;padding:4px 0">↓ 未达标则放弃</div>
+
+  <div class="layer layer-c">
+    <div class="layer-head">
+      <div class="layer-title">🔴 C层 — 放弃区（注码0%）</div>
+      <span class="badge b-gray" id="tag-c">待判断</span>
+    </div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.7">两层均不达标，本场一律放弃。不降到单双/角球/其他盘。等待本身就是盈利。</div>
+  </div>
+
+  <div id="funnel-result" style="display:none" class="result"></div>
+
+  <div class="divider"></div>
+  <div class="g3">
+    <div class="stat"><div class="stat-val" id="f-layer" style="font-size:16px;color:var(--text3)">—</div><div class="stat-label">当前层级</div></div>
+    <div class="stat"><div class="stat-val" id="f-rate" style="font-size:16px">—</div><div class="stat-label">预估胜率</div></div>
+    <div class="stat"><div class="stat-val" id="f-stake" style="font-size:16px">—</div><div class="stat-label">建议注码</div></div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button class="btn btn-ghost" style="flex:1" onclick="resetFunnel()">重置</button>
+    <button class="btn btn-gold" style="flex:2" onclick="saveToRecord()">✓ 保存本场记录</button>
+  </div>
+</div>
+
+<!-- RECORDS PANEL -->
+<div id="panel-records" class="panel">
+  <div class="sub-tabs">
+    <div class="sub-tab active" onclick="showSub('r-all')">全部记录</div>
+    <div class="sub-tab" onclick="showSub('r-r1')">第1轮</div>
+    <div class="sub-tab" onclick="showSub('r-r2')">第2轮</div>
+    <div class="sub-tab" onclick="showSub('r-new')">新增记录</div>
+  </div>
+
+  <div id="r-all" class="sub-panel active">
+    <div class="alert alert-green">截至第2轮+最新场次 · 正式记录从法国vs伊拉克起（含真实盘口）</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table><thead><tr><th>#</th><th>对阵</th><th>比分</th><th>层级</th><th>方向</th><th>结果</th></tr></thead>
+      <tbody id="records-all"></tbody></table>
+    </div>
+  </div>
+
+  <div id="r-r1" class="sub-panel">
+    <div class="alert alert-amber">第1轮参考期 · 欧美盘估算 · 非正式记录</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table><thead><tr><th>#</th><th>对阵</th><th>比分</th><th>层级</th><th>结果</th></tr></thead>
+      <tbody id="records-r1"></tbody></table>
+    </div>
+  </div>
+
+  <div id="r-r2" class="sub-panel">
+    <div class="alert alert-amber">第2轮参考期 · 欧美盘估算 · 非正式记录</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table><thead><tr><th>#</th><th>对阵</th><th>比分</th><th>层级</th><th>结果</th></tr></thead>
+      <tbody id="records-r2"></tbody></table>
+    </div>
+  </div>
+
+  <div id="r-new" class="sub-panel">
+    <div class="card">
+      <div class="card-title">✏️ 手动添加新记录</div>
+      <div class="g2" style="margin-bottom:8px">
+        <div><label class="field-label">对阵</label><input type="text" id="rec-match" placeholder="法国 vs 伊拉克"></div>
+        <div><label class="field-label">比分</label><input type="text" id="rec-score" placeholder="5-0"></div>
+      </div>
+      <div class="g3" style="margin-bottom:12px">
+        <div><label class="field-label">层级</label>
+          <select id="rec-layer"><option value="A">A层让球</option><option value="B">B层大小球</option><option value="C">C层放弃</option></select>
+        </div>
+        <div><label class="field-label">方向</label><input type="text" id="rec-dir" placeholder="让球3 / 大3.5"></div>
+        <div><label class="field-label">结果</label>
+          <select id="rec-result"><option value="win">✓ 命中</option><option value="lose">✗ 失误</option><option value="skip">— 正确放弃</option></select>
+        </div>
+      </div>
+      <button class="btn btn-gold btn-block" onclick="addRecord()">添加记录</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;margin-top:12px">
+      <table><thead><tr><th>对阵</th><th>比分</th><th>层级</th><th>方向</th><th>结果</th></tr></thead>
+      <tbody id="records-new"><tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">暂无新记录</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- RULES PANEL -->
+<div id="panel-rules" class="panel">
+  <div class="sub-tabs">
+    <div class="sub-tab active" onclick="showSub('rule-1')">盘口标准</div>
+    <div class="sub-tab" onclick="showSub('rule-2')">数据指标</div>
+    <div class="sub-tab" onclick="showSub('rule-3')">资金临场</div>
+    <div class="sub-tab" onclick="showSub('rule-4')">防爆冷</div>
+    <div class="sub-tab" onclick="showSub('rule-5')">优化记录</div>
+  </div>
+
+  <div id="rule-1" class="sub-panel active">
+    <div class="card">
+      <div class="rule-row"><div class="rule-num">01</div><div class="rule-body">平赔门槛 <strong style="color:var(--gold)">≥ 3.5</strong>（世界杯专用，原3.2升级）<div class="rule-note">↑ 世界杯爆冷率比联赛高30%</div></div></div>
+      <div class="rule-row"><div class="rule-num">02</div><div class="rule-body">让球+大小球必须方向一致，逻辑统一，矛盾则放弃<div class="rule-note">↑ 新增：让球和大小球交叉验证</div></div></div>
+      <div class="rule-row"><div class="rule-num">03</div><div class="rule-body"><strong style="color:var(--red)">第11条（最高优先级）</strong>：10+1平台全部统一稳定 ≥ 30分钟才判定<div class="rule-note">↑ Pinnacle为第11个强制核查平台</div></div></div>
+    </div>
+    <div class="alert alert-amber">10大平台：Bet365 · WilliamHill · Betfair · Bwin · Unibet · Ladbrokes · PaddyPower · Coral · 188BET · Sbobet<br>补充：Pinnacle · Sportradar · OddsPortal</div>
+  </div>
+
+  <div id="rule-2" class="sub-panel">
+    <div class="card">
+      <div class="rule-row"><div class="rule-num">04</div><div class="rule-body">进攻xG≥1.6+射正≥4.5；防线失xG≥1.2+落后失球率≥40%<div class="rule-note">↑ 近3场至少2场达标（须有连贯性）</div></div></div>
+      <div class="rule-row"><div class="rule-num">05</div><div class="rule-body">让球胜率门槛（世界杯版，全部+5%）<div class="rule-note">-0.5≥60% · -0.75≥65% · -1.0≥70% · -1.5≥75% · -3.0≥85%</div></div></div>
+      <div class="rule-row"><div class="rule-num">06</div><div class="rule-body">战意第一：控分/已出线/出局→降档或放弃<div class="rule-note">↑ 第3轮须额外确认出线需求</div></div></div>
+    </div>
+  </div>
+
+  <div id="rule-3" class="sub-panel">
+    <div class="card">
+      <div class="rule-row"><div class="rule-num">07</div><div class="rule-body">升盘降水+资金同向=真看好；越买越高水=诱盘→放弃<div class="rule-note">↑ 赛前2小时异动超0.1水位须重新等待</div></div></div>
+      <div class="rule-row"><div class="rule-num">08</div><div class="rule-body">阵容为王：核心缺阵/全替补→直接放弃<div class="rule-note">↑ 球星缺阵（梅西/姆巴佩）直接放弃</div></div></div>
+      <div class="rule-row"><div class="rule-num">09</div><div class="rule-body">分两步走：初步方向→赛前60分钟最终拍板，中途有变就停</div></div>
+      <div class="rule-row"><div class="rule-num">10</div><div class="rule-body">只买最优项：A层5% · B层3% · C层0%<div class="rule-note">↑ 降级时注码同步缩减，不是妥协是纪律</div></div></div>
+    </div>
+  </div>
+
+  <div id="rule-4" class="sub-panel">
+    <div class="card">
+      <div class="rule-row"><div class="rule-num">12</div><div class="rule-body"><strong style="color:var(--amber)">弱队主场优势</strong>：实质主场（球迷优势）→让球降档一级</div></div>
+      <div class="rule-row"><div class="rule-num">13</div><div class="rule-body"><strong style="color:var(--amber)">赔率过短危险</strong>：强队赔率＜1.35 → 历史爆冷28%，一律回避</div></div>
+      <div class="rule-row"><div class="rule-num">14</div><div class="rule-body"><strong style="color:var(--amber)">实力虚高识别</strong>：须查近2年大赛成绩（非友谊赛）<div class="rule-note">↑ 优化：日/韩/澳对欧洲强队放弃；对非洲/中东弱队正向买</div></div></div>
+      <div class="rule-row"><div class="rule-num">15</div><div class="rule-body"><strong style="color:var(--red)">第3轮控分陷阱</strong>：双队均已出线或出局 → 一律放弃</div></div>
+    </div>
+    <div class="alert alert-red">本届触发案例：巴西-摩洛哥1-1（规14）· 荷兰-日本2-2（规13+14）· 葡萄牙-刚果1-1（规14）· 土耳其双败（规13）</div>
+  </div>
+
+  <div id="rule-5" class="sub-panel">
+    <div class="card">
+      <div class="rule-row"><div class="rule-num">📌</div><div class="rule-body"><strong>规则14细分</strong>：日/韩/澳对欧洲强队=放弃；对非洲/中东弱队=正向买让球<br><span style="font-size:11px;color:var(--text3)">案例：日本4-0突尼斯，赛前C层放弃，方向判反</span></div></div>
+      <div class="rule-row"><div class="rule-num">📌</div><div class="rule-body"><strong>主场进攻加权</strong>：主场队进攻xG额外+0.3<br><span style="font-size:11px;color:var(--text3)">案例：墨西哥vs韩国小球方向判错</span></div></div>
+      <div class="rule-row"><div class="rule-num">📌</div><div class="rule-body"><strong>让球和大小球交叉验证</strong>：方向矛盾就降级或放弃，不同时买<br><span style="font-size:11px;color:var(--text3)">案例：乌拉圭vs佛得角让-1/1.5与大2.5矛盾</span></div></div>
+      <div class="rule-row"><div class="rule-num">📌</div><div class="rule-body"><strong>胜率用平台盘口换算</strong>：1÷(1+独赢水位)=隐含胜率，不用SportRadar<br><span style="font-size:11px;color:var(--text3)">更准确：阿根廷0.437→69.6%，未达70%门槛</span></div></div>
+      <div class="rule-row"><div class="rule-num">📌</div><div class="rule-body"><strong>亚盘优先</strong>：欧美盘给方向，亚盘截图做最终判定<br><span style="font-size:11px;color:var(--text3)">欧美盘无亚盘让球线，不可直接用于下注</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS PANEL -->
+<div id="panel-stats" class="panel">
+  <div class="hero">
+    <div class="hero-label">正式记录综合胜率</div>
+    <div class="hero-val" id="real-rate">—</div>
+    <div class="hero-sub">从法国vs伊拉克起正式统计（含真实亚盘数据）</div>
+  </div>
+
+  <div class="g4" style="margin-bottom:16px">
+    <div class="stat"><div class="stat-val" style="color:var(--blue)" id="s-total">33</div><div class="stat-label">参考场数</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--text3)" id="s-skip">13</div><div class="stat-label">C层放弃</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--green)" id="s-win">—</div><div class="stat-label">正式命中</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--red)" id="s-lose">—</div><div class="stat-label">正式失误</div></div>
+  </div>
+
+  <div class="section-head">参考期胜率（第1-2轮，欧美盘估算）</div>
+  <div class="card">
+    <div class="bar-wrap"><div class="bar-label"><span>A层让球（参考）</span><span style="color:var(--green)">75%</span></div><div class="bar-track"><div class="bar-fill" style="width:75%;background:var(--green)"></div></div></div>
+    <div class="bar-wrap" style="margin-top:10px"><div class="bar-label"><span>B层大小球（参考）</span><span style="color:var(--amber)">72.7%</span></div><div class="bar-track"><div class="bar-fill" style="width:72.7%;background:var(--amber)"></div></div></div>
+    <div class="bar-wrap" style="margin-top:10px"><div class="bar-label"><span>C层放弃正确率（参考）</span><span style="color:var(--text3)">84.6%</span></div><div class="bar-track"><div class="bar-fill" style="width:84.6%;background:var(--text3)"></div></div></div>
+  </div>
+
+  <div class="section-head">今晚判定记录</div>
+  <div class="card">
+    <div class="rule-row"><div class="rule-num">✅</div><div class="rule-body"><strong>法国 vs 伊拉克</strong> — A层，让球3，注码5%<br><span style="font-size:11px;color:var(--text3)">待赛后更新结果</span></div></div>
+    <div class="rule-row"><div class="rule-num">✅</div><div class="rule-body"><strong>约旦 vs 阿尔及利亚</strong> — B层，小2/2.5，注码3%<br><span style="font-size:11px;color:var(--text3)">待赛后更新结果</span></div></div>
+    <div class="rule-row"><div class="rule-num">❌</div><div class="rule-body"><strong>阿根廷 vs 奥地利</strong> — C层放弃（平赔3.341未达3.5）</div></div>
+    <div class="rule-row"><div class="rule-num">❌</div><div class="rule-body"><strong>挪威 vs 塞内加尔</strong> — C层放弃（平赔3.3未达3.5）</div></div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const R1=[
+  {n:1,m:'🇲🇽 墨西哥 vs 🇿🇦 南非',s:'2-0',l:'A',r:'win',d:'让-0.5'},
+  {n:2,m:'🇰🇷 韩国 vs 🇨🇿 捷克',s:'2-1',l:'B',r:'win',d:'大2.5'},
+  {n:3,m:'🇨🇦 加拿大 vs 🇧🇦 波黑',s:'1-1',l:'C',r:'skip',d:'—'},
+  {n:4,m:'🇺🇸 美国 vs 🇵🇾 巴拉圭',s:'4-1',l:'B',r:'win',d:'大2.5'},
+  {n:5,m:'🇦🇺 澳大利亚 vs 🇹🇷 土耳其',s:'2-0',l:'C',r:'skip',d:'规则13'},
+  {n:6,m:'🇶🇦 卡塔尔 vs 🇨🇭 瑞士',s:'1-1',l:'C',r:'skip',d:'—'},
+  {n:7,m:'🇩🇪 德国 vs 🇨🇼 库拉索',s:'7-1',l:'A',r:'win',d:'让-2.0'},
+  {n:8,m:'🇨🇮 科特迪瓦 vs 🇪🇨 厄瓜多尔',s:'1-0',l:'C',r:'skip',d:'—'},
+  {n:9,m:'🇳🇱 荷兰 vs 🇯🇵 日本',s:'2-2',l:'C',r:'skip',d:'规则14'},
+  {n:10,m:'🇸🇪 瑞典 vs 🇹🇳 突尼斯',s:'5-1',l:'B',r:'win',d:'大2.5'},
+  {n:11,m:'🇧🇪 比利时 vs 🇪🇬 埃及',s:'1-1',l:'C',r:'skip',d:'规则13'},
+  {n:12,m:'🇮🇷 伊朗 vs 🇳🇿 新西兰',s:'2-2',l:'C',r:'skip',d:'—'},
+  {n:13,m:'🇪🇸 西班牙 vs 🇨🇻 佛得角',s:'0-0',l:'C',r:'skip',d:'战意未确认'},
+  {n:14,m:'🇸🇦 沙特 vs 🇺🇾 乌拉圭',s:'1-1',l:'C',r:'skip',d:'—'},
+  {n:15,m:'🇭🇹 海地 vs 🏴󠁧󠁢󠁳󠁣󠁴󠁿 苏格兰',s:'0-1',l:'A',r:'win',d:'让-0.5'},
+  {n:16,m:'🇧🇷 巴西 vs 🇲🇦 摩洛哥',s:'1-1',l:'C',r:'skip',d:'规则14'},
+  {n:17,m:'🇫🇷 法国 vs 🇸🇳 塞内加尔',s:'3-1',l:'A',r:'win',d:'让-1.0'},
+  {n:18,m:'🇮🇶 伊拉克 vs 🇳🇴 挪威',s:'1-4',l:'B',r:'win',d:'大2.5'},
+  {n:19,m:'🇦🇷 阿根廷 vs 🇩🇿 阿尔及利亚',s:'3-0',l:'A',r:'win',d:'让-1.0'},
+  {n:20,m:'🇦🇹 奥地利 vs 🇯🇴 约旦',s:'3-1',l:'B',r:'win',d:'大2.5'},
+  {n:21,m:'🇵🇹 葡萄牙 vs 🇨🇩 刚果DR',s:'1-1',l:'C',r:'skip',d:'规则14'},
+];
+const R2=[
+  {n:22,m:'🇨🇿 捷克 vs 🇿🇦 南非',s:'1-1',l:'C',r:'skip',d:'双弱队'},
+  {n:23,m:'🇨🇭 瑞士 vs 🇧🇦 波黑',s:'4-1',l:'A',r:'win',d:'让-1.0'},
+  {n:24,m:'🇨🇦 加拿大 vs 🇶🇦 卡塔尔',s:'6-0',l:'B',r:'win',d:'大2.5'},
+  {n:25,m:'🇲🇽 墨西哥 vs 🇰🇷 韩国',s:'1-0',l:'B',r:'lose',d:'小2.5（判错）'},
+  {n:26,m:'🇺🇸 美国 vs 🇦🇺 澳大利亚',s:'2-0',l:'A',r:'win',d:'让-0.5'},
+  {n:27,m:'🏴󠁧󠁢󠁳󠁣󠁴󠁿 苏格兰 vs 🇲🇦 摩洛哥',s:'0-1',l:'C',r:'skip',d:'规则14'},
+  {n:28,m:'🇧🇷 巴西 vs 🇭🇹 海地',s:'3-0',l:'B',r:'win',d:'大2.5'},
+  {n:29,m:'🇹🇷 土耳其 vs 🇵🇾 巴拉圭',s:'0-1',l:'C',r:'skip',d:'规则13'},
+  {n:30,m:'🇳🇱 荷兰 vs 🇸🇪 瑞典',s:'5-1',l:'B',r:'win',d:'大2.5'},
+  {n:31,m:'🇩🇪 德国 vs 🇨🇮 科特迪瓦',s:'2-1',l:'B',r:'win',d:'大2.5'},
+  {n:32,m:'🇪🇨 厄瓜多尔 vs 🇨🇼 库拉索',s:'0-0',l:'C',r:'skip',d:'规则15'},
+  {n:33,m:'🇹🇳 突尼斯 vs 🇯🇵 日本',s:'0-4',l:'C',r:'skip',d:'规则14（优化）'},
+  {n:34,m:'🇪🇸 西班牙 vs 🇸🇦 沙特',s:'4-0',l:'C',r:'skip',d:'大小方向矛盾'},
+  {n:35,m:'🇧🇪 比利时 vs 🇮🇷 伊朗',s:'0-0',l:'C',r:'skip',d:'Doku缺阵+小球水重'},
+  {n:36,m:'🇺🇾 乌拉圭 vs 🇨🇻 佛得角',s:'2-2',l:'B',r:'lose',d:'让-1/1.5（Nunez不首发）'},
+  {n:37,m:'🇳🇿 新西兰 vs 🇪🇬 埃及',s:'1-3',l:'C',r:'skip',d:'平赔3.05未达标'},
+];
+let newRecords=[];
+
+function rowHTML(d){
+  const lb=d.l==='A'?'<span class="badge b-blue">A让球</span>':d.l==='B'?'<span class="badge b-amber">B大小</span>':'<span class="badge b-gray">C放弃</span>';
+  const rb=d.r==='win'?'<span class="badge b-green">✓ 命中</span>':d.r==='lose'?'<span class="badge b-red">✗ 失误</span>':'<span class="badge b-gray">放弃</span>';
+  return `<tr><td style="color:var(--text3)">${d.n}</td><td>${d.m}<br><span style="font-size:10px;color:var(--text3)">${d.d||''}</span></td><td style="font-weight:700;color:var(--gold)">${d.s}</td><td>${lb}</td><td style="font-size:11px;color:var(--text3)">${d.d||'—'}</td><td>${rb}</td></tr>`;
+}
+function rowHTMLShort(d){
+  const lb=d.l==='A'?'<span class="badge b-blue">A</span>':d.l==='B'?'<span class="badge b-amber">B</span>':'<span class="badge b-gray">C</span>';
+  const rb=d.r==='win'?'<span class="badge b-green">✓</span>':d.r==='lose'?'<span class="badge b-red">✗</span>':'<span class="badge b-gray">—</span>';
+  return `<tr><td style="color:var(--text3)">${d.n}</td><td>${d.m}</td><td style="font-weight:700;color:var(--gold)">${d.s}</td><td>${lb}</td><td>${rb}</td></tr>`;
+}
+
+function renderRecords(){
+  const all=[...R1,...R2,...newRecords];
+  document.getElementById('records-all').innerHTML=all.map(rowHTML).join('');
+  document.getElementById('records-r1').innerHTML=R1.map(rowHTMLShort).join('');
+  document.getElementById('records-r2').innerHTML=R2.map(rowHTMLShort).join('');
+  updateStats();
+}
+
+function addRecord(){
+  const m=document.getElementById('rec-match').value;
+  const s=document.getElementById('rec-score').value;
+  if(!m||!s){alert('请填写对阵和比分');return;}
+  const rec={n:38+newRecords.length,m,s,l:document.getElementById('rec-layer').value,r:document.getElementById('rec-result').value,d:document.getElementById('rec-dir').value};
+  newRecords.push(rec);
+  const tbody=document.getElementById('records-new');
+  if(newRecords.length===1)tbody.innerHTML='';
+  tbody.innerHTML+=`<tr><td>${m}</td><td style="color:var(--gold);font-weight:700">${s}</td><td>${rec.l==='A'?'<span class="badge b-blue">A</span>':rec.l==='B'?'<span class="badge b-amber">B</span>':'<span class="badge b-gray">C</span>'}</td><td style="font-size:11px;color:var(--text3)">${rec.d}</td><td>${rec.r==='win'?'<span class="badge b-green">✓</span>':rec.r==='lose'?'<span class="badge b-red">✗</span>':'<span class="badge b-gray">—</span>'}</td></tr>`;
+  document.getElementById('rec-match').value='';document.getElementById('rec-score').value='';document.getElementById('rec-dir').value='';
+  updateStats();
+}
+
+function updateStats(){
+  const wins=newRecords.filter(r=>r.r==='win').length;
+  const loses=newRecords.filter(r=>r.r==='lose').length;
+  const entered=wins+loses;
+  const rate=entered>0?Math.round(wins/entered*100)+'%':'待记录';
+  document.getElementById('real-rate').textContent=rate;
+  document.getElementById('s-win').textContent=wins||'—';
+  document.getElementById('s-lose').textContent=loses||'—';
+}
+
+// ===== LIVE MATCHES =====
+async function loadMatches(){
+  const c=document.getElementById('matches-container');
+  c.innerHTML='<div class="loading"><span class="spin"></span>正在抓取实时数据...</div>';
+  try{
+    const res=await fetch('https://worldcup26.ir/get/games');
+    if(!res.ok)throw new Error('API错误');
+    const data=await res.json();
+    const games=data.games||data||[];
+    if(!games.length){c.innerHTML='<div class="loading">暂无赛事数据</div>';return;}
+
+    // Group by status
+    const live=games.filter(g=>g.status==='in_progress'||g.status==='live');
+    const today=games.filter(g=>{
+      const d=new Date(g.utc_date||g.date||g.match_date);
+      const now=new Date();
+      return d.toDateString()===now.toDateString()&&g.status!=='finished'&&g.status!=='completed';
+    });
+    const finished=games.filter(g=>g.status==='finished'||g.status==='completed').slice(-8);
+
+    let html='';
+
+    if(live.length){
+      html+=`<div class="section-head">🔴 进行中</div>`;
+      live.forEach(g=>html+=matchCard(g,'live'));
+    }
+    if(today.length){
+      html+=`<div class="section-head">⏰ 今日赛事</div>`;
+      today.forEach(g=>html+=matchCard(g,'upcoming'));
+    }
+    if(finished.length){
+      html+=`<div class="section-head">✅ 最近完赛</div>`;
+      finished.reverse().forEach(g=>html+=matchCard(g,'finished'));
+    }
+
+    c.innerHTML=html||'<div class="loading">暂无数据</div>';
+    document.getElementById('last-update').textContent='更新：'+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){
+    c.innerHTML=`<div class="alert alert-red">⚠️ 抓取失败：${e.message}<br><span style="font-size:11px">免费API可能暂时不可用，请刷新重试</span></div>`;
+  }
+}
+
+function matchCard(g,type){
+  const home=g.home_team?.name||g.home||'主队';
+  const away=g.away_team?.name||g.away||'客队';
+  const hScore=g.score?.home??g.home_score??'';
+  const aScore=g.score?.away??g.away_score??'';
+  const score=hScore!==''?`${hScore} - ${aScore}`:'未开赛';
+  const timeStr=g.utc_date||g.date?new Date(g.utc_date||g.date).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kuala_Lumpur'}):'—';
+
+  let statusBadge='';
+  if(type==='live')statusBadge='<span class="badge b-red">🔴 直播</span>';
+  else if(type==='finished')statusBadge='<span class="badge b-gray">完赛</span>';
+  else statusBadge=`<span class="badge b-blue">${timeStr} MYT</span>`;
+
+  return `<div class="match-item">
+    <div class="match-time">${timeStr}</div>
+    <div class="match-teams">
+      <div class="match-name">${home} vs ${away}</div>
+      <div class="match-score">${score}</div>
+    </div>
+    <div class="match-badges">${statusBadge}</div>
+  </div>`;
+}
+
+// ===== FUNNEL =====
+function autoCheck(){
+  const draw=parseFloat(document.getElementById('draw-odds').value);
+  const over=parseFloat(document.getElementById('over-odds').value);
+  const win=parseFloat(document.getElementById('win-odds').value);
+
+  // Rule 1: draw odds
+  const t1=document.getElementById('a1-tag');
+  if(!isNaN(draw)){
+    if(draw>=3.5){document.getElementById('a1').checked=true;t1.textContent='✓ '+draw;t1.style.color='var(--green)';}
+    else{document.getElementById('a1').checked=false;t1.textContent='✗ '+draw+'<3.5';t1.style.color='var(--red)';}
+  }
+
+  // Win odds → implied probability
+  const t3=document.getElementById('a3-tag');
+  if(!isNaN(win)){
+    const prob=Math.round(1/(1+win)*100);
+    const hl=document.getElementById('handicap-line').value;
+    const thresholds={'-0.5':60,'-0.75':65,'-1.0':70,'-1.5':75,'-2.0':80,'-3.0':85};
+    const needed=thresholds[hl]||70;
+    if(prob>=needed){document.getElementById('a3').checked=true;t3.textContent=`✓ ${prob}%≥${needed}%`;t3.style.color='var(--green)';}
+    else{document.getElementById('a3').checked=false;t3.textContent=`✗ ${prob}%<${needed}%`;t3.style.color='var(--red)';}
+  }
+
+  // Over odds
+  const tb=document.getElementById('b1-tag');
+  if(!isNaN(over)){
+    if(over>=0.95){document.getElementById('b1').checked=true;tb.textContent='✓ 有期望值';tb.style.color='var(--green)';}
+    else{document.getElementById('b1').checked=false;tb.textContent='✗ 期望值低';tb.style.color='var(--red)';}
+  }
+
+  calc();
+}
+
+function calc(){
+  const a=[1,2,3,4,5,6,7,8,9].map(i=>document.getElementById('a'+i).checked);
+  const b=[1,2,3,4,5,6].map(i=>document.getElementById('b'+i).checked);
+  const aScore=a.filter(Boolean).length;
+  const bScore=b.filter(Boolean).length;
+  const aPass=aScore===9,bPass=bScore>=5;
+
+  const tagA=document.getElementById('tag-a');
+  const tagB=document.getElementById('tag-b');
+  const tagC=document.getElementById('tag-c');
+  const res=document.getElementById('funnel-result');
+  const fl=document.getElementById('f-layer');
+  const fr=document.getElementById('f-rate');
+  const fs=document.getElementById('f-stake');
+
+  if(aPass){
+    tagA.textContent='通过 ✓';tagA.className='badge b-green';
+    tagB.textContent='跳过';tagB.className='badge b-gray';
+    tagC.textContent='不需要';tagC.className='badge b-gray';
+    fl.textContent='A层让球';fl.style.color='var(--green)';
+    fr.textContent='70-75%';fr.style.color='var(--green)';
+    fs.textContent='5%';fs.style.color='var(--green)';
+    res.style.display='block';
+    res.style.background='var(--green-dim)';res.style.borderColor='var(--green-border)';
+    res.innerHTML='<div class="result-title" style="color:var(--green)">✓ 入场：买让球</div><div class="result-sub" style="color:rgba(0,200,83,.7)">9项全达标。赛前60分钟截图盘口确认，注码5%，分两步入场。</div>';
+  }else if(bPass){
+    tagA.textContent=`未达标 (${aScore}/9)`;tagA.className='badge b-amber';
+    tagB.textContent='通过 ✓';tagB.className='badge b-green';
+    tagC.textContent='不需要';tagC.className='badge b-gray';
+    fl.textContent='B层大小球';fl.style.color='var(--amber)';
+    fr.textContent='65-72%';fr.style.color='var(--amber)';
+    fs.textContent='3%';fs.style.color='var(--amber)';
+    res.style.display='block';
+    res.style.background='var(--amber-dim)';res.style.borderColor='var(--amber-border)';
+    res.innerHTML=`<div class="result-title" style="color:var(--amber)">↓ 降级：改买大小球</div><div class="result-sub" style="color:rgba(255,171,0,.7)">让球有${9-aScore}项未达标，降级大小球。注码3%，截图平台盘口确认方向。</div>`;
+  }else if(aScore+bScore>0){
+    tagA.textContent='未达标';tagA.className='badge b-red';
+    tagB.textContent='未达标';tagB.className='badge b-red';
+    tagC.textContent='触发 ✓';tagC.className='badge b-red';
+    fl.textContent='C层放弃';fl.style.color='var(--red)';
+    fr.textContent='< 55%';fr.style.color='var(--red)';
+    fs.textContent='0%';fs.style.color='var(--red)';
+    res.style.display='block';
+    res.style.background='var(--red-dim)';res.style.borderColor='var(--red-border)';
+    res.innerHTML='<div class="result-title" style="color:var(--red)">✕ 放弃，等下一场</div><div class="result-sub" style="color:rgba(255,61,61,.7)">两层均未达标，期望值为负。等待是最佳策略。</div>';
+  }else{
+    ['tag-a','tag-b','tag-c'].forEach(id=>{document.getElementById(id).textContent='待判断';document.getElementById(id).className='badge b-gray';});
+    fl.textContent='—';fl.style.color='var(--text3)';
+    fr.textContent='—';fr.style.color='var(--text3)';
+    fs.textContent='—';fs.style.color='var(--text3)';
+    res.style.display='none';
+  }
+}
+
+function resetFunnel(){
+  [1,2,3,4,5,6,7,8,9].forEach(i=>document.getElementById('a'+i).checked=false);
+  [1,2,3,4,5,6].forEach(i=>document.getElementById('b'+i).checked=false);
+  ['team-home','team-away','draw-odds','over-odds','win-odds'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('handicap-line').value='';
+  document.getElementById('ou-line').value='';
+  ['a1-tag','a3-tag','b1-tag'].forEach(id=>{document.getElementById(id).textContent='';});
+  calc();
+}
+
+function saveToRecord(){
+  const home=document.getElementById('team-home').value||'主队';
+  const away=document.getElementById('team-away').value||'客队';
+  const layer=document.getElementById('f-layer').textContent;
+  alert(`已标记：${home} vs ${away}\n层级：${layer}\n赛后回来填写比分和结果`);
+}
+
+// ===== NAV =====
+function showPanel(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function showSub(id){
+  const p=document.getElementById(id).parentElement;
+  p.querySelectorAll('.sub-panel').forEach(x=>x.classList.remove('active'));
+  p.querySelectorAll('.sub-tab').forEach(x=>x.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ===== INIT =====
+renderRecords();
+calc();
+loadMatches();
+</script>
+</body>
+</html>
