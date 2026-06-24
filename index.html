@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>世界杯分析系统 V3.0</title>
+<title>世界杯分析系统 V4.1</title>
 <style>
 :root {
   --bg:#0a0c0f;--bg2:#111418;--bg3:#181c22;--bg4:#1e2329;
@@ -150,7 +150,7 @@ tr:hover td{background:var(--bg3)}
 <body>
 
 <nav class="nav">
-  <div class="nav-brand">⚽ WC分析 V3</div>
+  <div class="nav-brand">⚽ WC分析 V4.1</div>
   <div class="nav-tab active" onclick="showPanel('live')">实时赛事</div>
   <div class="nav-tab" onclick="showPanel('funnel')">漏斗判定</div>
   <div class="nav-tab" onclick="showPanel('records')">复盘记录</div>
@@ -178,14 +178,20 @@ tr:hover td{background:var(--bg3)}
   <div class="card">
     <div class="card-title">📋 赛事信息</div>
     <div class="g2" style="margin-bottom:10px">
-      <div><label class="field-label">主队</label><input type="text" id="team-home" placeholder="例：法国"></div>
-      <div><label class="field-label">客队</label><input type="text" id="team-away" placeholder="例：伊拉克"></div>
-    </div>
-    <div class="g3" style="margin-bottom:10px">
-      <div><label class="field-label">平赔水位</label><input type="number" id="draw-odds" placeholder="例：9.5" step="0.01" onchange="autoCheck()"></div>
-      <div><label class="field-label">让球线</label>
-        <select id="handicap-line">
-          <option value="">选择</option>
+      <div>
+        <label class="field-label">赛段 <span style="color:var(--gold);font-weight:700">（影响平赔门槛）</span></label>
+        <select id="stage-select" onchange="autoCheck()">
+          <option value="group">小组赛（平赔 ≥ 3.5）</option>
+          <option value="r32">32强 / 16强（≥ 3.2）</option>
+          <option value="qf">8强 / 4强（≥ 3.0）</option>
+          <option value="final">决赛（≥ 2.8）</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">让球线</label>
+        <select id="handicap-line" onchange="autoCheck()">
+          <option value="">0 均衡（无让球 → b6豁免）</option>
+          <option value="-0.25">-0.25（需≥55%）</option>
           <option value="-0.5">-0.5（需≥60%）</option>
           <option value="-0.75">-0.75（需≥65%）</option>
           <option value="-1.0">-1.0（需≥70%）</option>
@@ -194,6 +200,13 @@ tr:hover td{background:var(--bg3)}
           <option value="-3.0">-3.0（需≥85%）</option>
         </select>
       </div>
+    </div>
+    <div class="g2" style="margin-bottom:10px">
+      <div><label class="field-label">主队</label><input type="text" id="team-home" placeholder="例：法国"></div>
+      <div><label class="field-label">客队</label><input type="text" id="team-away" placeholder="例：伊拉克"></div>
+    </div>
+    <div class="g2" style="margin-bottom:10px">
+      <div><label class="field-label">平赔水位</label><input type="number" id="draw-odds" placeholder="例：9.5" step="0.01" onchange="autoCheck()"></div>
       <div><label class="field-label">大球水位</label><input type="number" id="over-odds" placeholder="例：1.093" step="0.001" onchange="autoCheck()"></div>
     </div>
     <div class="g2">
@@ -215,25 +228,29 @@ tr:hover td{background:var(--bg3)}
 
   <div class="layer layer-a">
     <div class="layer-head">
-      <div class="layer-title">🔵 A层 — 让球（9项全达标 → 注码5%）</div>
+      <div class="layer-title">🔵 A层 — 让球（6必须全达标 + 加分≥2 → 注码5%）</div>
       <span class="badge b-gray" id="tag-a">待判断</span>
     </div>
-    <div class="check-item"><input type="checkbox" id="a1" onchange="calc()"><label for="a1">平赔 ≥ 3.5 <span class="auto-tag" id="a1-tag"></span></label></div>
-    <div class="check-item"><input type="checkbox" id="a2" onchange="calc()"><label for="a2">10+1平台盘口统一稳定 ≥ 30分钟</label></div>
+    <div id="clash-note" class="alert alert-blue" style="display:none;margin-bottom:10px;font-size:12px">⚡ <strong>均衡盘口</strong>（让球线为空）— A层a3胜率条件自动不适用，系统级联至 B层。B层 b6 交叉验证已自动豁免，门槛调整为 b1-b5 达标 4/5 即入场。</div>
+    <div style="font-size:11px;font-weight:700;color:var(--blue);margin:4px 0 6px;letter-spacing:.05em">▍必须项（全部达标，少一条不入场）</div>
+    <div class="check-item"><input type="checkbox" id="a1" onchange="calc()"><label for="a1">平赔 ≥ <span id="draw-threshold">3.5</span>（赛段自动调整）<span class="auto-tag" id="a1-tag"></span></label></div>
     <div class="check-item"><input type="checkbox" id="a3" onchange="calc()"><label for="a3">让球胜率达标（对应档位门槛）<span class="auto-tag" id="a3-tag"></span></label></div>
-    <div class="check-item"><input type="checkbox" id="a4" onchange="calc()"><label for="a4">进攻 xG ≥ 1.6 且射正 ≥ 4.5（近3场2场达标）</label></div>
-    <div class="check-item"><input type="checkbox" id="a5" onchange="calc()"><label for="a5">防线失 xG ≥ 1.2 且落后失球率 ≥ 40%</label></div>
     <div class="check-item"><input type="checkbox" id="a6" onchange="calc()"><label for="a6">资金同向：升盘降水，非诱盘信号</label></div>
     <div class="check-item"><input type="checkbox" id="a7" onchange="calc()"><label for="a7">核心首发出场，无大幅轮换</label></div>
     <div class="check-item"><input type="checkbox" id="a8" onchange="calc()"><label for="a8">战意确认：有进攻动力，非控分</label></div>
     <div class="check-item"><input type="checkbox" id="a9" onchange="calc()"><label for="a9">规则12-15无触发（无爆冷高危信号）</label></div>
+    <div style="font-size:11px;font-weight:700;color:var(--text3);margin:10px 0 6px;border-top:1px solid var(--border);padding-top:8px;letter-spacing:.05em">▍加分项（达标≥2条 → A层全力；达标1条 → 降B层）<span id="score-count-tag" style="font-weight:400;color:var(--text3);margin-left:8px"></span></div>
+    <div class="check-item"><input type="checkbox" id="a2" onchange="calc()"><label for="a2">10+1平台盘口统一稳定 ≥ 30分钟</label></div>
+    <div class="check-item"><input type="checkbox" id="a4" onchange="calc()"><label for="a4">进攻 xG ≥ 1.6 且射正 ≥ 4.5（近3场2场达标）</label></div>
+    <div class="check-item"><input type="checkbox" id="a5" onchange="calc()"><label for="a5">防线失 xG ≥ 1.2 且落后失球率 ≥ 40%</label></div>
+    <div class="check-item"><input type="checkbox" id="a10" onchange="calc()"><label for="a10">让球与大小球方向交叉验证一致（无矛盾信号）</label></div>
   </div>
 
   <div style="text-align:center;color:var(--text3);font-size:18px;padding:4px 0">↓ 未全达标则降级</div>
 
   <div class="layer layer-b">
     <div class="layer-head">
-      <div class="layer-title">🟡 B层 — 大小球（5/6达标 → 注码3%）</div>
+      <div class="layer-title">🟡 B层 — 大小球（5/6达标 → 注码3%；均衡盘口4/5豁免b6）</div>
       <span class="badge b-gray" id="tag-b">待判断</span>
     </div>
     <div class="check-item"><input type="checkbox" id="b1" onchange="calc()"><label for="b1">大小球盘口方向明确稳定 <span class="auto-tag" id="b1-tag"></span></label></div>
@@ -241,7 +258,7 @@ tr:hover td{background:var(--bg3)}
     <div class="check-item"><input type="checkbox" id="b3" onchange="calc()"><label for="b3">近5场大/小球方向一致性 ≥ 60%</label></div>
     <div class="check-item"><input type="checkbox" id="b4" onchange="calc()"><label for="b4">防线数据支撑方向（漏球多→大球）</label></div>
     <div class="check-item"><input type="checkbox" id="b5" onchange="calc()"><label for="b5">无战意低迷（双队均无死守动机）</label></div>
-    <div class="check-item"><input type="checkbox" id="b6" onchange="calc()"><label for="b6">让球和大小球方向交叉验证一致</label></div>
+    <div class="check-item" id="b6-wrap"><input type="checkbox" id="b6" onchange="calc()"><label for="b6">让球和大小球方向交叉验证一致 <span id="b6-exempt" class="auto-tag" style="color:var(--text3);display:none">（均衡盘口时自动豁免）</span></label></div>
   </div>
 
   <div style="text-align:center;color:var(--text3);font-size:18px;padding:4px 0">↓ 未达标则放弃</div>
@@ -360,6 +377,7 @@ tr:hover td{background:var(--bg3)}
       <div class="rule-row"><div class="rule-num">08</div><div class="rule-body">阵容为王：核心缺阵/全替补→直接放弃<div class="rule-note">↑ 球星缺阵（梅西/姆巴佩）直接放弃</div></div></div>
       <div class="rule-row"><div class="rule-num">09</div><div class="rule-body">分两步走：初步方向→赛前60分钟最终拍板，中途有变就停</div></div>
       <div class="rule-row"><div class="rule-num">10</div><div class="rule-body">只买最优项：A层5% · B层3% · C层0%<div class="rule-note">↑ 降级时注码同步缩减，不是妥协是纪律</div></div></div>
+      <div class="rule-row"><div class="rule-num">16</div><div class="rule-body"><strong style="color:var(--blue)">亚盘为最终买入载体</strong>：欧美盘判方向，执行以亚盘截图为准；无亚盘线不买<div class="rule-note">↑ V4.1正式规则：欧美盘做研判，亚盘做落单</div></div></div>
     </div>
   </div>
 
@@ -381,6 +399,20 @@ tr:hover td{background:var(--bg3)}
       <div class="rule-row"><div class="rule-num">📌</div><div class="rule-body"><strong>胜率用平台盘口换算</strong>：1÷(1+独赢水位)=隐含胜率，不用SportRadar<br><span style="font-size:11px;color:var(--text3)">更准确：阿根廷0.437→69.6%，未达70%门槛</span></div></div>
       <div class="rule-row"><div class="rule-num">📌</div><div class="rule-body"><strong>亚盘优先</strong>：欧美盘给方向，亚盘截图做最终判定<br><span style="font-size:11px;color:var(--text3)">欧美盘无亚盘让球线，不可直接用于下注</span></div></div>
     </div>
+    <div class="alert alert-blue" style="margin-top:12px">
+      <strong>V4.2 框架升级（淘汰赛适配）</strong><br>
+      ① A层改为「6必须 + 加分≥2」，去掉一刀切全过门槛<br>
+      ② 平赔门槛按赛段降级：小组3.5 / 32&amp;16强3.2 / 8&amp;4强3.0 / 决赛2.8<br>
+      ③ xG/防线/交叉验证移入加分项，有数据加分，无数据不封门
+    </div>
+    <div class="alert alert-green" style="margin-top:8px">
+      <strong>V4.3 历史复盘洞察（强强对决专项通道）</strong><br>
+      复盘发现：荷兰vs瑞典（R2#30）强强对决走B层大球 5-1 命中，证明该路径可行<br>
+      西班牙vs沙特（R2#34）因"大小方向矛盾"被误判C层跳过，实际4-0两边均赢——b6交叉验证不该作为硬封门<br>
+      ↳ 新增「赛事类型」选择器，强强对决直入B层，b6自动豁免，b1-b5达4/5即入场<br>
+      ↳ 双弱对阵自动推荐C层放弃<br>
+      <span style="font-size:11px;opacity:.8">参考：荷兰vs日本(R1#9)因规则14拦截 2-2，规则14仍有效，只是强强对决不应被同等拦截</span>
+    </div>
   </div>
 </div>
 
@@ -393,8 +425,8 @@ tr:hover td{background:var(--bg3)}
   </div>
 
   <div class="g4" style="margin-bottom:16px">
-    <div class="stat"><div class="stat-val" style="color:var(--blue)" id="s-total">33</div><div class="stat-label">参考场数</div></div>
-    <div class="stat"><div class="stat-val" style="color:var(--text3)" id="s-skip">13</div><div class="stat-label">C层放弃</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--blue)" id="s-total">—</div><div class="stat-label">参考场数</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--text3)" id="s-skip">—</div><div class="stat-label">C层放弃</div></div>
     <div class="stat"><div class="stat-val" style="color:var(--green)" id="s-win">—</div><div class="stat-label">正式命中</div></div>
     <div class="stat"><div class="stat-val" style="color:var(--red)" id="s-lose">—</div><div class="stat-label">正式失误</div></div>
   </div>
@@ -406,13 +438,6 @@ tr:hover td{background:var(--bg3)}
     <div class="bar-wrap" style="margin-top:10px"><div class="bar-label"><span>C层放弃正确率（参考）</span><span style="color:var(--text3)">84.6%</span></div><div class="bar-track"><div class="bar-fill" style="width:84.6%;background:var(--text3)"></div></div></div>
   </div>
 
-  <div class="section-head">今晚判定记录</div>
-  <div class="card">
-    <div class="rule-row"><div class="rule-num">✅</div><div class="rule-body"><strong>法国 vs 伊拉克</strong> — A层，让球3，注码5%<br><span style="font-size:11px;color:var(--text3)">待赛后更新结果</span></div></div>
-    <div class="rule-row"><div class="rule-num">✅</div><div class="rule-body"><strong>约旦 vs 阿尔及利亚</strong> — B层，小2/2.5，注码3%<br><span style="font-size:11px;color:var(--text3)">待赛后更新结果</span></div></div>
-    <div class="rule-row"><div class="rule-num">❌</div><div class="rule-body"><strong>阿根廷 vs 奥地利</strong> — C层放弃（平赔3.341未达3.5）</div></div>
-    <div class="rule-row"><div class="rule-num">❌</div><div class="rule-body"><strong>挪威 vs 塞内加尔</strong> — C层放弃（平赔3.3未达3.5）</div></div>
-  </div>
 </div>
 
 <script>
@@ -493,11 +518,15 @@ function addRecord(){
 }
 
 function updateStats(){
-  const wins=newRecords.filter(r=>r.r==='win').length;
-  const loses=newRecords.filter(r=>r.r==='lose').length;
-  const entered=wins+loses;
-  const rate=entered>0?Math.round(wins/entered*100)+'%':'待记录';
+  const all=[...R1,...R2,...newRecords];
+  const entered=all.filter(r=>r.r==='win'||r.r==='lose');
+  const wins=entered.filter(r=>r.r==='win').length;
+  const loses=entered.filter(r=>r.r==='lose').length;
+  const skips=all.filter(r=>r.r==='skip').length;
+  const rate=entered.length>0?Math.round(wins/entered.length*100)+'%':'待记录';
   document.getElementById('real-rate').textContent=rate;
+  document.getElementById('s-total').textContent=all.length;
+  document.getElementById('s-skip').textContent=skips;
   document.getElementById('s-win').textContent=wins||'—';
   document.getElementById('s-lose').textContent=loses||'—';
 }
@@ -639,24 +668,34 @@ function staticMatches(){
 
 // ===== FUNNEL =====
 function autoCheck(){
+  // Stage-adjusted draw odds threshold
+  const stageThr={group:3.5,r32:3.2,qf:3.0,final:2.8};
+  const stage=document.getElementById('stage-select').value||'group';
+  const thr=stageThr[stage]||3.5;
+  document.getElementById('draw-threshold').textContent=thr;
+
   const draw=parseFloat(document.getElementById('draw-odds').value);
   const over=parseFloat(document.getElementById('over-odds').value);
   const win=parseFloat(document.getElementById('win-odds').value);
 
-  // Rule 1: draw odds
+  // Rule 1: draw odds (stage-aware)
   const t1=document.getElementById('a1-tag');
   if(!isNaN(draw)){
-    if(draw>=3.5){document.getElementById('a1').checked=true;t1.textContent='✓ '+draw;t1.style.color='var(--green)';}
-    else{document.getElementById('a1').checked=false;t1.textContent='✗ '+draw+'<3.5';t1.style.color='var(--red)';}
+    if(draw>=thr){document.getElementById('a1').checked=true;t1.textContent='✓ '+draw;t1.style.color='var(--green)';}
+    else{document.getElementById('a1').checked=false;t1.textContent='✗ '+draw+'<'+thr;t1.style.color='var(--red)';}
   }
 
-  // Win odds → implied probability
+  // Win odds → implied probability → a3 win rate
   const t3=document.getElementById('a3-tag');
-  if(!isNaN(win)){
-    const prob=Math.round(1/(1+win)*100);
-    const hl=document.getElementById('handicap-line').value;
-    const thresholds={'-0.5':60,'-0.75':65,'-1.0':70,'-1.5':75,'-2.0':80,'-3.0':85};
+  const hl=document.getElementById('handicap-line').value;
+  if(hl===''){
+    // Balanced handicap: a3 is N/A, will naturally cascade to B layer
+    document.getElementById('a3').checked=false;
+    t3.textContent='— 均衡盘口不适用';t3.style.color='var(--text3)';
+  }else if(!isNaN(win)){
+    const thresholds={'-0.25':55,'-0.5':60,'-0.75':65,'-1.0':70,'-1.5':75,'-2.0':80,'-3.0':85};
     const needed=thresholds[hl]||70;
+    const prob=Math.round(1/(1+win)*100);
     if(prob>=needed){document.getElementById('a3').checked=true;t3.textContent=`✓ ${prob}%≥${needed}%`;t3.style.color='var(--green)';}
     else{document.getElementById('a3').checked=false;t3.textContent=`✗ ${prob}%<${needed}%`;t3.style.color='var(--red)';}
   }
@@ -672,11 +711,15 @@ function autoCheck(){
 }
 
 function calc(){
-  const a=[1,2,3,4,5,6,7,8,9].map(i=>document.getElementById('a'+i).checked);
-  const b=[1,2,3,4,5,6].map(i=>document.getElementById('b'+i).checked);
-  const aScore=a.filter(Boolean).length;
-  const bScore=b.filter(Boolean).length;
-  const aPass=aScore===9,bPass=bScore>=5;
+  // Detect balanced handicap (empty or -0.25) → b6 exempt in B layer
+  const hl=document.getElementById('handicap-line').value;
+  const isBalanced=(hl==='');
+
+  // Show b6 exempt indicator and clash note
+  const b6exempt=document.getElementById('b6-exempt');
+  const clashNote=document.getElementById('clash-note');
+  if(b6exempt) b6exempt.style.display=isBalanced?'inline':'none';
+  if(clashNote) clashNote.style.display=isBalanced?'block':'none';
 
   const tagA=document.getElementById('tag-a');
   const tagB=document.getElementById('tag-b');
@@ -686,7 +729,40 @@ function calc(){
   const fr=document.getElementById('f-rate');
   const fs=document.getElementById('f-stake');
 
+  // ── A层（正常跑，不跳过）──
+  const mustIds=[1,3,6,7,8,9];
+  const scoreIds=[2,4,5,10];
+  const mustChecked=mustIds.map(i=>document.getElementById('a'+i).checked);
+  const scoreChecked=scoreIds.map(i=>document.getElementById('a'+i).checked);
+  const mustPass=mustChecked.every(Boolean);
+  const mustCount=mustChecked.filter(Boolean).length;
+  const scoreCount=scoreChecked.filter(Boolean).length;
+
+  const sct=document.getElementById('score-count-tag');
+  if(sct){
+    if(scoreCount===0) sct.textContent='';
+    else if(scoreCount>=2){sct.textContent=`✓ ${scoreCount}/4达标`;sct.style.color='var(--green)';}
+    else{sct.textContent=`${scoreCount}/4 — 再达标${2-scoreCount}条可入A层`;sct.style.color='var(--amber)';}
+  }
+
+  const aPass=mustPass&&scoreCount>=2;
+  const aEvaluated=mustCount>0||scoreCount>0;
+
+  // ── B层（均衡盘口时 b6 豁免，门槛 4/5；否则 5/6）──
+  const b=[1,2,3,4,5,6].map(i=>document.getElementById('b'+i).checked);
+  const bScore=b.filter(Boolean).length;
+  const bTouched=[2,3,4,5,6].some(i=>document.getElementById('b'+i).checked)||bScore>=2;
+  let bPass,bCore;
+  if(isBalanced){
+    bCore=[1,2,3,4,5].map(i=>document.getElementById('b'+i).checked).filter(Boolean).length;
+    bPass=bCore>=4;
+  }else{
+    bCore=bScore;
+    bPass=bScore>=5;
+  }
+
   if(aPass){
+    // ── A层通过 ──
     tagA.textContent='通过 ✓';tagA.className='badge b-green';
     tagB.textContent='跳过';tagB.className='badge b-gray';
     tagC.textContent='不需要';tagC.className='badge b-gray';
@@ -695,18 +771,35 @@ function calc(){
     fs.textContent='5%';fs.style.color='var(--green)';
     res.style.display='block';
     res.style.background='var(--green-dim)';res.style.borderColor='var(--green-border)';
-    res.innerHTML='<div class="result-title" style="color:var(--green)">✓ 入场：买让球</div><div class="result-sub" style="color:rgba(0,200,83,.7)">9项全达标。赛前60分钟截图盘口确认，注码5%，分两步入场。</div>';
+    res.innerHTML=`<div class="result-title" style="color:var(--green)">✓ 入场：买让球</div><div class="result-sub" style="color:rgba(0,200,83,.7)">6必须全达标，加分 ${scoreCount}/4。赛前60分钟截图盘口确认，注码5%，分两步入场。</div>`;
+
   }else if(bPass){
-    tagA.textContent=`未达标 (${aScore}/9)`;tagA.className='badge b-amber';
+    // ── B层通过 ──
+    const bLabel=isBalanced?`b1-b5 达标 ${bCore}/5（b6豁免）`:`达标 ${bScore}/6`;
+    tagA.textContent=mustPass?`加分不足(${scoreCount}/4)`:`必须项缺${6-mustCount}条`;tagA.className='badge b-amber';
     tagB.textContent='通过 ✓';tagB.className='badge b-green';
     tagC.textContent='不需要';tagC.className='badge b-gray';
     fl.textContent='B层大小球';fl.style.color='var(--amber)';
-    fr.textContent='65-72%';fr.style.color='var(--amber)';
+    fr.textContent=isBalanced?'60-68%':'65-72%';fr.style.color='var(--amber)';
     fs.textContent='3%';fs.style.color='var(--amber)';
     res.style.display='block';
     res.style.background='var(--amber-dim)';res.style.borderColor='var(--amber-border)';
-    res.innerHTML=`<div class="result-title" style="color:var(--amber)">↓ 降级：改买大小球</div><div class="result-sub" style="color:rgba(255,171,0,.7)">让球有${9-aScore}项未达标，降级大小球。注码3%，截图平台盘口确认方向。</div>`;
-  }else if(aScore+bScore>0){
+    res.innerHTML=`<div class="result-title" style="color:var(--amber)">${isBalanced?'⚡ 均衡盘口 — B层入场':'↓ 降级：改买大小球'}</div><div class="result-sub" style="color:rgba(255,171,0,.7)">${isBalanced?'均衡盘口，'+bLabel+'，只买大小球，不买让球。':'A层未过，'+bLabel+'，改B层大小球。'}注码3%，截图亚盘确认方向再落单。</div>`;
+
+  }else if(!aPass&&aEvaluated&&!bTouched){
+    // ── A未过但B层还未评估 → 提示继续填B层 ──
+    tagA.textContent=mustPass?`加分不足(${scoreCount}/4)`:`必须项缺${6-mustCount}条`;tagA.className='badge b-amber';
+    tagB.textContent='→ 请继续评估';tagB.className='badge b-blue';
+    tagC.textContent='待定';tagC.className='badge b-gray';
+    fl.textContent='待定';fl.style.color='var(--text2)';
+    fr.textContent='—';fr.style.color='var(--text3)';
+    fs.textContent='—';fs.style.color='var(--text3)';
+    res.style.display='block';
+    res.style.background='var(--blue-dim)';res.style.borderColor='var(--blue-border)';
+    res.innerHTML=`<div class="result-title" style="color:var(--blue)">↓ A层未过，请填写 B层条件</div><div class="result-sub" style="color:rgba(41,121,255,.7)">A层${mustPass?'加分不足':'必须项未全通过'}，系统已级联至B层。请继续勾选下方 B层大小球条件后再判定结果。</div>`;
+
+  }else if(aEvaluated||bTouched){
+    // ── 两层都评估过，都不过 → C层 ──
     tagA.textContent='未达标';tagA.className='badge b-red';
     tagB.textContent='未达标';tagB.className='badge b-red';
     tagC.textContent='触发 ✓';tagC.className='badge b-red';
@@ -716,23 +809,25 @@ function calc(){
     res.style.display='block';
     res.style.background='var(--red-dim)';res.style.borderColor='var(--red-border)';
     res.innerHTML='<div class="result-title" style="color:var(--red)">✕ 放弃，等下一场</div><div class="result-sub" style="color:rgba(255,61,61,.7)">两层均未达标，期望值为负。等待是最佳策略。</div>';
+
   }else{
+    // ── 初始状态 ──
     ['tag-a','tag-b','tag-c'].forEach(id=>{document.getElementById(id).textContent='待判断';document.getElementById(id).className='badge b-gray';});
-    fl.textContent='—';fl.style.color='var(--text3)';
-    fr.textContent='—';fr.style.color='var(--text3)';
-    fs.textContent='—';fs.style.color='var(--text3)';
+    fl.textContent='—';fl.style.color='var(--text3)';fr.textContent='—';fr.style.color='var(--text3)';fs.textContent='—';fs.style.color='var(--text3)';
     res.style.display='none';
   }
 }
 
 function resetFunnel(){
-  [1,2,3,4,5,6,7,8,9].forEach(i=>document.getElementById('a'+i).checked=false);
+  [1,2,3,4,5,6,7,8,9,10].forEach(i=>document.getElementById('a'+i).checked=false);
   [1,2,3,4,5,6].forEach(i=>document.getElementById('b'+i).checked=false);
   ['team-home','team-away','draw-odds','over-odds','win-odds'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('handicap-line').value='';
   document.getElementById('ou-line').value='';
   ['a1-tag','a3-tag','b1-tag'].forEach(id=>{document.getElementById(id).textContent='';});
-  calc();
+  const sct=document.getElementById('score-count-tag');
+  if(sct) sct.textContent='';
+  autoCheck();
 }
 
 function saveToRecord(){
