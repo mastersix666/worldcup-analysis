@@ -177,6 +177,15 @@ tr:hover td{background:var(--bg3)}
 <div id="panel-funnel" class="panel">
   <div class="card">
     <div class="card-title">📋 赛事信息</div>
+    <div style="margin-bottom:10px">
+      <label class="field-label">赛段 <span style="color:var(--gold);font-weight:700">（影响平赔门槛）</span></label>
+      <select id="stage-select" onchange="autoCheck()" style="max-width:320px">
+        <option value="group">小组赛（平赔门槛 ≥ 3.5）</option>
+        <option value="r32">32强 / 16强（门槛 ≥ 3.2）</option>
+        <option value="qf">8强 / 4强（门槛 ≥ 3.0）</option>
+        <option value="final">决赛（门槛 ≥ 2.8）</option>
+      </select>
+    </div>
     <div class="g2" style="margin-bottom:10px">
       <div><label class="field-label">主队</label><input type="text" id="team-home" placeholder="例：法国"></div>
       <div><label class="field-label">客队</label><input type="text" id="team-away" placeholder="例：伊拉克"></div>
@@ -215,19 +224,21 @@ tr:hover td{background:var(--bg3)}
 
   <div class="layer layer-a">
     <div class="layer-head">
-      <div class="layer-title">🔵 A层 — 让球（10项全达标 → 注码5%）</div>
+      <div class="layer-title">🔵 A层 — 让球（6必须全达标 + 加分≥2 → 注码5%）</div>
       <span class="badge b-gray" id="tag-a">待判断</span>
     </div>
-    <div class="check-item"><input type="checkbox" id="a1" onchange="calc()"><label for="a1">平赔 ≥ 3.5 <span class="auto-tag" id="a1-tag"></span></label></div>
-    <div class="check-item"><input type="checkbox" id="a2" onchange="calc()"><label for="a2">10+1平台盘口统一稳定 ≥ 30分钟</label></div>
+    <div style="font-size:11px;font-weight:700;color:var(--blue);margin:4px 0 6px;letter-spacing:.05em">▍必须项（全部达标，少一条不入场）</div>
+    <div class="check-item"><input type="checkbox" id="a1" onchange="calc()"><label for="a1">平赔 ≥ <span id="draw-threshold">3.5</span>（赛段自动调整）<span class="auto-tag" id="a1-tag"></span></label></div>
     <div class="check-item"><input type="checkbox" id="a3" onchange="calc()"><label for="a3">让球胜率达标（对应档位门槛）<span class="auto-tag" id="a3-tag"></span></label></div>
-    <div class="check-item"><input type="checkbox" id="a4" onchange="calc()"><label for="a4">进攻 xG ≥ 1.6 且射正 ≥ 4.5（近3场2场达标）</label></div>
-    <div class="check-item"><input type="checkbox" id="a5" onchange="calc()"><label for="a5">防线失 xG ≥ 1.2 且落后失球率 ≥ 40%</label></div>
     <div class="check-item"><input type="checkbox" id="a6" onchange="calc()"><label for="a6">资金同向：升盘降水，非诱盘信号</label></div>
     <div class="check-item"><input type="checkbox" id="a7" onchange="calc()"><label for="a7">核心首发出场，无大幅轮换</label></div>
     <div class="check-item"><input type="checkbox" id="a8" onchange="calc()"><label for="a8">战意确认：有进攻动力，非控分</label></div>
     <div class="check-item"><input type="checkbox" id="a9" onchange="calc()"><label for="a9">规则12-15无触发（无爆冷高危信号）</label></div>
-    <div class="check-item"><input type="checkbox" id="a10" onchange="calc()"><label for="a10">让球与大小球方向交叉验证一致（无矛盾信号）<span class="auto-tag" style="color:var(--blue)">V4.1</span></label></div>
+    <div style="font-size:11px;font-weight:700;color:var(--text3);margin:10px 0 6px;border-top:1px solid var(--border);padding-top:8px;letter-spacing:.05em">▍加分项（达标≥2条 → A层全力；达标1条 → 降B层）<span id="score-count-tag" style="font-weight:400;color:var(--text3);margin-left:8px"></span></div>
+    <div class="check-item"><input type="checkbox" id="a2" onchange="calc()"><label for="a2">10+1平台盘口统一稳定 ≥ 30分钟</label></div>
+    <div class="check-item"><input type="checkbox" id="a4" onchange="calc()"><label for="a4">进攻 xG ≥ 1.6 且射正 ≥ 4.5（近3场2场达标）</label></div>
+    <div class="check-item"><input type="checkbox" id="a5" onchange="calc()"><label for="a5">防线失 xG ≥ 1.2 且落后失球率 ≥ 40%</label></div>
+    <div class="check-item"><input type="checkbox" id="a10" onchange="calc()"><label for="a10">让球与大小球方向交叉验证一致（无矛盾信号）</label></div>
   </div>
 
   <div style="text-align:center;color:var(--text3);font-size:18px;padding:4px 0">↓ 未全达标则降级</div>
@@ -382,6 +393,13 @@ tr:hover td{background:var(--bg3)}
       <div class="rule-row"><div class="rule-num">📌</div><div class="rule-body"><strong>让球和大小球交叉验证</strong>：方向矛盾就降级或放弃，不同时买<br><span style="font-size:11px;color:var(--text3)">案例：乌拉圭vs佛得角让-1/1.5与大2.5矛盾</span></div></div>
       <div class="rule-row"><div class="rule-num">📌</div><div class="rule-body"><strong>胜率用平台盘口换算</strong>：1÷(1+独赢水位)=隐含胜率，不用SportRadar<br><span style="font-size:11px;color:var(--text3)">更准确：阿根廷0.437→69.6%，未达70%门槛</span></div></div>
       <div class="rule-row"><div class="rule-num">📌</div><div class="rule-body"><strong>亚盘优先</strong>：欧美盘给方向，亚盘截图做最终判定<br><span style="font-size:11px;color:var(--text3)">欧美盘无亚盘让球线，不可直接用于下注</span></div></div>
+    </div>
+    <div class="alert alert-blue" style="margin-top:12px">
+      <strong>V4.2 框架升级（淘汰赛适配）</strong><br>
+      ① A层改为「6必须 + 加分≥2」，去掉一刀切全过门槛<br>
+      ② 平赔门槛按赛段降级：小组3.5 / 32&amp;16强3.2 / 8&amp;4强3.0 / 决赛2.8<br>
+      ③ xG/防线/交叉验证移入加分项，有数据加分，无数据不封门<br>
+      <span style="font-size:11px;opacity:.8">原因：淘汰赛双强对碰，平赔普遍低于3.5，严格门槛导致无场可入</span>
     </div>
   </div>
 </div>
@@ -645,15 +663,21 @@ function staticMatches(){
 
 // ===== FUNNEL =====
 function autoCheck(){
+  // Stage-adjusted draw odds threshold
+  const stageThr={group:3.5,r32:3.2,qf:3.0,final:2.8};
+  const stage=document.getElementById('stage-select').value||'group';
+  const thr=stageThr[stage]||3.5;
+  document.getElementById('draw-threshold').textContent=thr;
+
   const draw=parseFloat(document.getElementById('draw-odds').value);
   const over=parseFloat(document.getElementById('over-odds').value);
   const win=parseFloat(document.getElementById('win-odds').value);
 
-  // Rule 1: draw odds
+  // Rule 1: draw odds (stage-aware)
   const t1=document.getElementById('a1-tag');
   if(!isNaN(draw)){
-    if(draw>=3.5){document.getElementById('a1').checked=true;t1.textContent='✓ '+draw;t1.style.color='var(--green)';}
-    else{document.getElementById('a1').checked=false;t1.textContent='✗ '+draw+'<3.5';t1.style.color='var(--red)';}
+    if(draw>=thr){document.getElementById('a1').checked=true;t1.textContent='✓ '+draw;t1.style.color='var(--green)';}
+    else{document.getElementById('a1').checked=false;t1.textContent='✗ '+draw+'<'+thr;t1.style.color='var(--red)';}
   }
 
   // Win odds → implied probability
@@ -678,11 +702,29 @@ function autoCheck(){
 }
 
 function calc(){
-  const a=[1,2,3,4,5,6,7,8,9,10].map(i=>document.getElementById('a'+i).checked);
+  // A layer: 6 must-pass items + 4 scoring items (need ≥2)
+  const mustIds=[1,3,6,7,8,9];
+  const scoreIds=[2,4,5,10];
+  const mustChecked=mustIds.map(i=>document.getElementById('a'+i).checked);
+  const scoreChecked=scoreIds.map(i=>document.getElementById('a'+i).checked);
+  const mustPass=mustChecked.every(Boolean);
+  const mustCount=mustChecked.filter(Boolean).length;
+  const scoreCount=scoreChecked.filter(Boolean).length;
+
+  // Update scoring item counter display
+  const sct=document.getElementById('score-count-tag');
+  if(sct){
+    if(scoreCount===0) sct.textContent='';
+    else if(scoreCount>=2) sct.textContent=`✓ ${scoreCount}/4达标`;
+    else sct.textContent=`${scoreCount}/4 — 需再达标${2-scoreCount}条`;
+    sct.style.color=scoreCount>=2?'var(--green)':'var(--amber)';
+  }
+
   const b=[1,2,3,4,5,6].map(i=>document.getElementById('b'+i).checked);
-  const aScore=a.filter(Boolean).length;
   const bScore=b.filter(Boolean).length;
-  const aPass=aScore===10,bPass=bScore>=5;
+  const aPass=mustPass&&scoreCount>=2;
+  const bPass=bScore>=5;
+  const anyChecked=mustCount>0||scoreCount>0||bScore>0;
 
   const tagA=document.getElementById('tag-a');
   const tagB=document.getElementById('tag-b');
@@ -701,9 +743,10 @@ function calc(){
     fs.textContent='5%';fs.style.color='var(--green)';
     res.style.display='block';
     res.style.background='var(--green-dim)';res.style.borderColor='var(--green-border)';
-    res.innerHTML='<div class="result-title" style="color:var(--green)">✓ 入场：买让球</div><div class="result-sub" style="color:rgba(0,200,83,.7)">9项全达标。赛前60分钟截图盘口确认，注码5%，分两步入场。</div>';
-  }else if(bPass){
-    tagA.textContent=`未达标 (${aScore}/9)`;tagA.className='badge b-amber';
+    res.innerHTML=`<div class="result-title" style="color:var(--green)">✓ 入场：买让球</div><div class="result-sub" style="color:rgba(0,200,83,.7)">6必须全达标，加分 ${scoreCount}/4。赛前60分钟截图盘口确认，注码5%，分两步入场。</div>`;
+  }else if(mustPass&&scoreCount===1&&bPass){
+    // Must items all pass, only 1 scoring — downgrade to B if B qualifies
+    tagA.textContent=`加分不足(${scoreCount}/4)`;tagA.className='badge b-amber';
     tagB.textContent='通过 ✓';tagB.className='badge b-green';
     tagC.textContent='不需要';tagC.className='badge b-gray';
     fl.textContent='B层大小球';fl.style.color='var(--amber)';
@@ -711,8 +754,18 @@ function calc(){
     fs.textContent='3%';fs.style.color='var(--amber)';
     res.style.display='block';
     res.style.background='var(--amber-dim)';res.style.borderColor='var(--amber-border)';
-    res.innerHTML=`<div class="result-title" style="color:var(--amber)">↓ 降级：改买大小球</div><div class="result-sub" style="color:rgba(255,171,0,.7)">让球有${10-aScore}项未达标，降级大小球。注码3%，截图平台盘口确认方向。</div>`;
-  }else if(aScore+bScore>0){
+    res.innerHTML=`<div class="result-title" style="color:var(--amber)">↓ 降级：改买大小球</div><div class="result-sub" style="color:rgba(255,171,0,.7)">必须项全通过，但加分仅${scoreCount}/4（需≥2），信心不足降B层。注码3%。</div>`;
+  }else if(bPass){
+    tagA.textContent=mustPass?`加分不足(${scoreCount}/4)`:`必须项缺${6-mustCount}条`;tagA.className='badge b-amber';
+    tagB.textContent='通过 ✓';tagB.className='badge b-green';
+    tagC.textContent='不需要';tagC.className='badge b-gray';
+    fl.textContent='B层大小球';fl.style.color='var(--amber)';
+    fr.textContent='65-72%';fr.style.color='var(--amber)';
+    fs.textContent='3%';fs.style.color='var(--amber)';
+    res.style.display='block';
+    res.style.background='var(--amber-dim)';res.style.borderColor='var(--amber-border)';
+    res.innerHTML=`<div class="result-title" style="color:var(--amber)">↓ 降级：改买大小球</div><div class="result-sub" style="color:rgba(255,171,0,.7)">${mustPass?'加分'+scoreCount+'/4不足':'必须项未全通过（'+mustCount+'/6）'}，让球层不入，改B层大小球。注码3%，截图平台盘口确认方向。</div>`;
+  }else if(anyChecked){
     tagA.textContent='未达标';tagA.className='badge b-red';
     tagB.textContent='未达标';tagB.className='badge b-red';
     tagC.textContent='触发 ✓';tagC.className='badge b-red';
@@ -738,7 +791,10 @@ function resetFunnel(){
   document.getElementById('handicap-line').value='';
   document.getElementById('ou-line').value='';
   ['a1-tag','a3-tag','b1-tag'].forEach(id=>{document.getElementById(id).textContent='';});
-  calc();
+  const sct=document.getElementById('score-count-tag');
+  if(sct) sct.textContent='';
+  // Reset threshold display to current stage
+  autoCheck();
 }
 
 function saveToRecord(){
