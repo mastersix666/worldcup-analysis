@@ -190,8 +190,8 @@ tr:hover td{background:var(--bg3)}
       <div>
         <label class="field-label">让球线</label>
         <select id="handicap-line" onchange="autoCheck()">
-          <option value="">均衡（无明显让球 → b6豁免）</option>
-          <option value="-0.25">-0.25（均衡偏向）</option>
+          <option value="">0 均衡（无让球 → b6豁免）</option>
+          <option value="-0.25">-0.25（需≥55%）</option>
           <option value="-0.5">-0.5（需≥60%）</option>
           <option value="-0.75">-0.75（需≥65%）</option>
           <option value="-1.0">-1.0（需≥70%）</option>
@@ -231,7 +231,7 @@ tr:hover td{background:var(--bg3)}
       <div class="layer-title">🔵 A层 — 让球（6必须全达标 + 加分≥2 → 注码5%）</div>
       <span class="badge b-gray" id="tag-a">待判断</span>
     </div>
-    <div id="clash-note" class="alert alert-blue" style="display:none;margin-bottom:10px;font-size:12px">⚡ <strong>均衡盘口</strong>（让球线为空/-0.25）— A层a3胜率条件将自然不达标，系统自动级联至 B层。B层中 b6 交叉验证已自动豁免，门槛调整为 b1-b5 达标 4/5。</div>
+    <div id="clash-note" class="alert alert-blue" style="display:none;margin-bottom:10px;font-size:12px">⚡ <strong>均衡盘口</strong>（让球线为空）— A层a3胜率条件自动不适用，系统级联至 B层。B层 b6 交叉验证已自动豁免，门槛调整为 b1-b5 达标 4/5 即入场。</div>
     <div style="font-size:11px;font-weight:700;color:var(--blue);margin:4px 0 6px;letter-spacing:.05em">▍必须项（全部达标，少一条不入场）</div>
     <div class="check-item"><input type="checkbox" id="a1" onchange="calc()"><label for="a1">平赔 ≥ <span id="draw-threshold">3.5</span>（赛段自动调整）<span class="auto-tag" id="a1-tag"></span></label></div>
     <div class="check-item"><input type="checkbox" id="a3" onchange="calc()"><label for="a3">让球胜率达标（对应档位门槛）<span class="auto-tag" id="a3-tag"></span></label></div>
@@ -250,7 +250,7 @@ tr:hover td{background:var(--bg3)}
 
   <div class="layer layer-b">
     <div class="layer-head">
-      <div class="layer-title">🟡 B层 — 大小球（5/6达标 → 注码3%）</div>
+      <div class="layer-title">🟡 B层 — 大小球（5/6达标 → 注码3%；均衡盘口4/5豁免b6）</div>
       <span class="badge b-gray" id="tag-b">待判断</span>
     </div>
     <div class="check-item"><input type="checkbox" id="b1" onchange="calc()"><label for="b1">大小球盘口方向明确稳定 <span class="auto-tag" id="b1-tag"></span></label></div>
@@ -258,7 +258,7 @@ tr:hover td{background:var(--bg3)}
     <div class="check-item"><input type="checkbox" id="b3" onchange="calc()"><label for="b3">近5场大/小球方向一致性 ≥ 60%</label></div>
     <div class="check-item"><input type="checkbox" id="b4" onchange="calc()"><label for="b4">防线数据支撑方向（漏球多→大球）</label></div>
     <div class="check-item"><input type="checkbox" id="b5" onchange="calc()"><label for="b5">无战意低迷（双队均无死守动机）</label></div>
-    <div class="check-item" id="b6-wrap"><input type="checkbox" id="b6" onchange="calc()"><label for="b6">让球和大小球方向交叉验证一致 <span id="b6-exempt" class="auto-tag" style="color:var(--text3);display:none">（强强对决时豁免）</span></label></div>
+    <div class="check-item" id="b6-wrap"><input type="checkbox" id="b6" onchange="calc()"><label for="b6">让球和大小球方向交叉验证一致 <span id="b6-exempt" class="auto-tag" style="color:var(--text3);display:none">（均衡盘口时自动豁免）</span></label></div>
   </div>
 
   <div style="text-align:center;color:var(--text3);font-size:18px;padding:4px 0">↓ 未达标则放弃</div>
@@ -438,13 +438,6 @@ tr:hover td{background:var(--bg3)}
     <div class="bar-wrap" style="margin-top:10px"><div class="bar-label"><span>C层放弃正确率（参考）</span><span style="color:var(--text3)">84.6%</span></div><div class="bar-track"><div class="bar-fill" style="width:84.6%;background:var(--text3)"></div></div></div>
   </div>
 
-  <div class="section-head">今晚判定记录</div>
-  <div class="card">
-    <div class="rule-row"><div class="rule-num">✅</div><div class="rule-body"><strong>法国 vs 伊拉克</strong> — A层，让球3，注码5%<br><span style="font-size:11px;color:var(--text3)">待赛后更新结果</span></div></div>
-    <div class="rule-row"><div class="rule-num">✅</div><div class="rule-body"><strong>约旦 vs 阿尔及利亚</strong> — B层，小2/2.5，注码3%<br><span style="font-size:11px;color:var(--text3)">待赛后更新结果</span></div></div>
-    <div class="rule-row"><div class="rule-num">❌</div><div class="rule-body"><strong>阿根廷 vs 奥地利</strong> — C层放弃（平赔3.341未达3.5）</div></div>
-    <div class="rule-row"><div class="rule-num">❌</div><div class="rule-body"><strong>挪威 vs 塞内加尔</strong> — C层放弃（平赔3.3未达3.5）</div></div>
-  </div>
 </div>
 
 <script>
@@ -692,13 +685,17 @@ function autoCheck(){
     else{document.getElementById('a1').checked=false;t1.textContent='✗ '+draw+'<'+thr;t1.style.color='var(--red)';}
   }
 
-  // Win odds → implied probability
+  // Win odds → implied probability → a3 win rate
   const t3=document.getElementById('a3-tag');
-  if(!isNaN(win)){
-    const prob=Math.round(1/(1+win)*100);
-    const hl=document.getElementById('handicap-line').value;
-    const thresholds={'-0.5':60,'-0.75':65,'-1.0':70,'-1.5':75,'-2.0':80,'-3.0':85};
+  const hl=document.getElementById('handicap-line').value;
+  if(hl===''){
+    // Balanced handicap: a3 is N/A, will naturally cascade to B layer
+    document.getElementById('a3').checked=false;
+    t3.textContent='— 均衡盘口不适用';t3.style.color='var(--text3)';
+  }else if(!isNaN(win)){
+    const thresholds={'-0.25':55,'-0.5':60,'-0.75':65,'-1.0':70,'-1.5':75,'-2.0':80,'-3.0':85};
     const needed=thresholds[hl]||70;
+    const prob=Math.round(1/(1+win)*100);
     if(prob>=needed){document.getElementById('a3').checked=true;t3.textContent=`✓ ${prob}%≥${needed}%`;t3.style.color='var(--green)';}
     else{document.getElementById('a3').checked=false;t3.textContent=`✗ ${prob}%<${needed}%`;t3.style.color='var(--red)';}
   }
@@ -716,7 +713,7 @@ function autoCheck(){
 function calc(){
   // Detect balanced handicap (empty or -0.25) → b6 exempt in B layer
   const hl=document.getElementById('handicap-line').value;
-  const isBalanced=(hl===''||hl==='-0.25');
+  const isBalanced=(hl==='');
 
   // Show b6 exempt indicator and clash note
   const b6exempt=document.getElementById('b6-exempt');
@@ -754,7 +751,7 @@ function calc(){
   // ── B层（均衡盘口时 b6 豁免，门槛 4/5；否则 5/6）──
   const b=[1,2,3,4,5,6].map(i=>document.getElementById('b'+i).checked);
   const bScore=b.filter(Boolean).length;
-  const bTouched=bScore>0; // 用户是否评估过B层
+  const bTouched=[2,3,4,5,6].some(i=>document.getElementById('b'+i).checked)||bScore>=2;
   let bPass,bCore;
   if(isBalanced){
     bCore=[1,2,3,4,5].map(i=>document.getElementById('b'+i).checked).filter(Boolean).length;
