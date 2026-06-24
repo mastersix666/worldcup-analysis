@@ -749,22 +749,23 @@ function calc(){
   }
 
   const aPass=mustPass&&scoreCount>=2;
+  const aEvaluated=mustCount>0||scoreCount>0;
 
   // ── B层（均衡盘口时 b6 豁免，门槛 4/5；否则 5/6）──
   const b=[1,2,3,4,5,6].map(i=>document.getElementById('b'+i).checked);
   const bScore=b.filter(Boolean).length;
-  let bPass;
+  const bTouched=bScore>0; // 用户是否评估过B层
+  let bPass,bCore;
   if(isBalanced){
-    // Exclude b6 from scoring, need 4 out of b1-b5
-    const bCore=[1,2,3,4,5].map(i=>document.getElementById('b'+i).checked).filter(Boolean).length;
+    bCore=[1,2,3,4,5].map(i=>document.getElementById('b'+i).checked).filter(Boolean).length;
     bPass=bCore>=4;
   }else{
+    bCore=bScore;
     bPass=bScore>=5;
   }
 
-  const anyChecked=mustCount>0||scoreCount>0||bScore>0;
-
   if(aPass){
+    // ── A层通过 ──
     tagA.textContent='通过 ✓';tagA.className='badge b-green';
     tagB.textContent='跳过';tagB.className='badge b-gray';
     tagC.textContent='不需要';tagC.className='badge b-gray';
@@ -774,8 +775,10 @@ function calc(){
     res.style.display='block';
     res.style.background='var(--green-dim)';res.style.borderColor='var(--green-border)';
     res.innerHTML=`<div class="result-title" style="color:var(--green)">✓ 入场：买让球</div><div class="result-sub" style="color:rgba(0,200,83,.7)">6必须全达标，加分 ${scoreCount}/4。赛前60分钟截图盘口确认，注码5%，分两步入场。</div>`;
+
   }else if(bPass){
-    const bLabel=isBalanced?`b1-b5 达标（b6豁免）`:`达标 ${bScore}/6`;
+    // ── B层通过 ──
+    const bLabel=isBalanced?`b1-b5 达标 ${bCore}/5（b6豁免）`:`达标 ${bScore}/6`;
     tagA.textContent=mustPass?`加分不足(${scoreCount}/4)`:`必须项缺${6-mustCount}条`;tagA.className='badge b-amber';
     tagB.textContent='通过 ✓';tagB.className='badge b-green';
     tagC.textContent='不需要';tagC.className='badge b-gray';
@@ -784,8 +787,22 @@ function calc(){
     fs.textContent='3%';fs.style.color='var(--amber)';
     res.style.display='block';
     res.style.background='var(--amber-dim)';res.style.borderColor='var(--amber-border)';
-    res.innerHTML=`<div class="result-title" style="color:var(--amber)">${isBalanced?'⚡ 均衡盘口 — B层入场':'↓ 降级：改买大小球'}</div><div class="result-sub" style="color:rgba(255,171,0,.7)">${isBalanced?'均衡盘口直入B层，'+bLabel+'。只买大小球，不买让球。':'A层未过，'+bLabel+'。'}注码3%，截图亚盘确认方向再落单。</div>`;
-  }else if(anyChecked){
+    res.innerHTML=`<div class="result-title" style="color:var(--amber)">${isBalanced?'⚡ 均衡盘口 — B层入场':'↓ 降级：改买大小球'}</div><div class="result-sub" style="color:rgba(255,171,0,.7)">${isBalanced?'均衡盘口，'+bLabel+'，只买大小球，不买让球。':'A层未过，'+bLabel+'，改B层大小球。'}注码3%，截图亚盘确认方向再落单。</div>`;
+
+  }else if(!aPass&&aEvaluated&&!bTouched){
+    // ── A未过但B层还未评估 → 提示继续填B层 ──
+    tagA.textContent=mustPass?`加分不足(${scoreCount}/4)`:`必须项缺${6-mustCount}条`;tagA.className='badge b-amber';
+    tagB.textContent='→ 请继续评估';tagB.className='badge b-blue';
+    tagC.textContent='待定';tagC.className='badge b-gray';
+    fl.textContent='待定';fl.style.color='var(--text2)';
+    fr.textContent='—';fr.style.color='var(--text3)';
+    fs.textContent='—';fs.style.color='var(--text3)';
+    res.style.display='block';
+    res.style.background='var(--blue-dim)';res.style.borderColor='var(--blue-border)';
+    res.innerHTML=`<div class="result-title" style="color:var(--blue)">↓ A层未过，请填写 B层条件</div><div class="result-sub" style="color:rgba(41,121,255,.7)">A层${mustPass?'加分不足':'必须项未全通过'}，系统已级联至B层。请继续勾选下方 B层大小球条件后再判定结果。</div>`;
+
+  }else if(aEvaluated||bTouched){
+    // ── 两层都评估过，都不过 → C层 ──
     tagA.textContent='未达标';tagA.className='badge b-red';
     tagB.textContent='未达标';tagB.className='badge b-red';
     tagC.textContent='触发 ✓';tagC.className='badge b-red';
@@ -795,7 +812,9 @@ function calc(){
     res.style.display='block';
     res.style.background='var(--red-dim)';res.style.borderColor='var(--red-border)';
     res.innerHTML='<div class="result-title" style="color:var(--red)">✕ 放弃，等下一场</div><div class="result-sub" style="color:rgba(255,61,61,.7)">两层均未达标，期望值为负。等待是最佳策略。</div>';
+
   }else{
+    // ── 初始状态 ──
     ['tag-a','tag-b','tag-c'].forEach(id=>{document.getElementById(id).textContent='待判断';document.getElementById(id).className='badge b-gray';});
     fl.textContent='—';fl.style.color='var(--text3)';fr.textContent='—';fr.style.color='var(--text3)';fs.textContent='—';fs.style.color='var(--text3)';
     res.style.display='none';
